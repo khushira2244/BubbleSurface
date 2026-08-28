@@ -8,7 +8,8 @@ import { EvidenceReferenceValidator } from "./domain/control-plane/evidence-refe
 import { ControlPlaneService } from "./domain/control-plane/control-plane.service";
 import { SqliteControlPlaneRepository } from "./repositories/sqlite-control-plane.repository";
 import { SqliteIdentityAdapter } from "./integrations/sqlite-identity.adapter";
-import { SqliteSecurityEventAdapter } from "./integrations/sqlite-security-event.adapter";
+import { createSecurityEventSource } from "./integrations/security-event-source.factory";
+import { getIntegrationConfig } from "./config/integrations";
 import { CapabilityContextService } from "./webmcp/capability-context.service";
 import { SqliteCapabilityContextRepository } from "./webmcp/sqlite-capability-context.repository";
 import { createWebMcpToolDefinitions } from "./webmcp/tool-definitions";
@@ -16,19 +17,24 @@ import { ControlPlaneWebMcpAuditRecorder } from "./webmcp/webmcp-audit";
 import { ToolInvocationService } from "./webmcp/tool-invocation.service";
 import { CapabilityRefreshService } from "./webmcp/capability-refresh.service";
 import type { BrowserWebMcpAdapter } from "./webmcp/browser-webmcp.adapter";
+import { OpenAiResponsesClient, type ReasoningModelClient } from "./reasoning/openai-responses.client";
+import { SecurityReasoningService } from "./reasoning/security-reasoning.service";
+import { ReasoningProviderError } from "./reasoning/reasoning.errors";
+import { SqliteProposalReviewRepository } from "./review/sqlite-proposal-review.repository";
+import { ProposalReviewService } from "./review/proposal-review.service";
 
 seedSecurityData(db);
 const securityRepository = new SqliteSecurityContextRepository(db);
 export const lifecycleService = new LifecycleService(new SqliteCaseRepository(db));
 export const securityContextService = new SecurityContextService(securityRepository);
 const controlPlaneRepository = new SqliteControlPlaneRepository(db);
-const evidenceReferenceValidator = new EvidenceReferenceValidator(securityRepository);
+export const evidenceReferenceValidator = new EvidenceReferenceValidator(securityRepository);
 export const controlPlaneService = new ControlPlaneService(
   controlPlaneRepository,
   evidenceReferenceValidator,
 );
 export const identityProvider = new SqliteIdentityAdapter(securityRepository);
-export const securityEventSource = new SqliteSecurityEventAdapter(db);
+export const securityEventSource = createSecurityEventSource(db, getIntegrationConfig());
 export const capabilityContextService = new CapabilityContextService(new SqliteCapabilityContextRepository(db));
 export const webMcpTools = createWebMcpToolDefinitions({ securityContext: securityContextService, identityProvider,
   eventSource: securityEventSource, evidenceValidator: evidenceReferenceValidator });
@@ -36,3 +42,15 @@ export const webMcpAudit = new ControlPlaneWebMcpAuditRecorder(controlPlaneServi
 export const webMcpInvocationService = new ToolInvocationService(capabilityContextService, webMcpTools, webMcpAudit);
 export const createCapabilityRefreshService = (browser: BrowserWebMcpAdapter) =>
   new CapabilityRefreshService(capabilityContextService, webMcpTools, webMcpInvocationService, browser, webMcpAudit);
+
+const integrationConfig = getIntegrationConfig();
+const unavailableReasoningClient: ReasoningModelClient = { createStructuredResponse: async () => {
+  throw new ReasoningProviderError("REASONING_NOT_CONFIGURED", "OPENAI_API_KEY is not configured.");
+} };
+const reasoningModelClient = integrationConfig.OPENAI_API_KEY
+  ? new OpenAiResponsesClient(integrationConfig.OPENAI_API_KEY, integrationConfig.OPENAI_MODEL)
+  : unavailableReasoningClient;
+export const securityReasoningService = new SecurityReasoningService(securityContextService, securityEventSource,
+  evidenceReferenceValidator, controlPlaneService, reasoningModelClient);
+export const proposalReviewService = new ProposalReviewService(new SqliteProposalReviewRepository(db),
+  controlPlaneService, securityContextService, evidenceReferenceValidator, lifecycleService);

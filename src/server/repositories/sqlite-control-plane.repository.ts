@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import { actionProposalSchema, executionRecordSchema, type ActionProposal, type ApprovalDecision, type AuditEvent, type ExecutionRecord, type ReasoningRun, type VerificationResult } from "../domain/control-plane/control-plane.schemas";
+import { actionProposalSchema, executionRecordSchema, reasoningRunSchema, type ActionProposal, type ApprovalDecision, type AuditEvent, type ExecutionRecord, type ReasoningRun, type VerificationResult } from "../domain/control-plane/control-plane.schemas";
 import type { ControlPlaneRepository } from "../domain/control-plane/control-plane.repository";
 
 export class SqliteControlPlaneRepository implements ControlPlaneRepository {
@@ -56,8 +56,19 @@ export class SqliteControlPlaneRepository implements ControlPlaneRepository {
         JSON.stringify(x.expectedState), JSON.stringify(x.observedState), x.success ? 1 : 0);
   }
   saveReasoningRun(x: ReasoningRun): void {
-    this.db.prepare("INSERT INTO reasoning_runs (id,subject_type,subject_id,status,input_hash,output_json,model,created_at,completed_at) VALUES (?,?,?,?,?,?,?,?,?)")
-      .run(x.id, x.subjectType, x.subjectId, x.status, x.inputHash, x.output ? JSON.stringify(x.output) : null, x.model, x.createdAt, x.completedAt);
+    this.db.prepare(`INSERT INTO reasoning_runs
+      (id,subject_type,subject_id,status,input_hash,output_json,model,created_at,completed_at,lifecycle_version,prompt_version,latency_ms,usage_json,failure_classification)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(x.id, x.subjectType, x.subjectId, x.status, x.inputHash,
+        x.output ? JSON.stringify(x.output) : null, x.model, x.createdAt, x.completedAt, x.lifecycleVersion,
+        x.promptVersion, x.latencyMs, x.usage ? JSON.stringify(x.usage) : null, x.failureClassification);
+  }
+  getReasoningRun(id: string): ReasoningRun | null {
+    const r = this.db.prepare("SELECT * FROM reasoning_runs WHERE id = ?").get(id) as Record<string, unknown> | undefined;
+    return r ? reasoningRunSchema.parse({ id: r.id, subjectType: r.subject_type, subjectId: r.subject_id,
+      status: r.status, inputHash: r.input_hash, output: r.output_json ? JSON.parse(String(r.output_json)) : null,
+      model: r.model, lifecycleVersion: r.lifecycle_version, promptVersion: r.prompt_version,
+      latencyMs: r.latency_ms, usage: r.usage_json ? JSON.parse(String(r.usage_json)) : null,
+      failureClassification: r.failure_classification, createdAt: r.created_at, completedAt: r.completed_at }) : null;
   }
   appendAuditEvent(x: AuditEvent): void {
     this.db.prepare(`INSERT INTO audit_events

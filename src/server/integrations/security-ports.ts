@@ -9,12 +9,14 @@ export interface EventSearchQuery {
   limit?: number;
 }
 export interface EvidenceTimeline { events: SecurityEvent[]; evidence: Evidence[] }
+export type MaybePromise<T> = T | Promise<T>;
 
 export interface SecurityEventSource {
-  searchEvents(query: EventSearchQuery): SecurityEvent[];
-  getEventsForIdentity(identityId: string): SecurityEvent[];
-  getEvidenceTimeline(subjectType: "INCIDENT" | "FINDING", subjectId: string): EvidenceTimeline;
-  getEventsForIncident(incidentId: string): SecurityEvent[];
+  indexSecurityEvent?(event: SecurityEvent): Promise<void>;
+  searchEvents(query: EventSearchQuery): MaybePromise<SecurityEvent[]>;
+  getEventsForIdentity(identityId: string): MaybePromise<SecurityEvent[]>;
+  getEvidenceTimeline(subjectType: "INCIDENT" | "FINDING", subjectId: string): MaybePromise<EvidenceTimeline>;
+  getEventsForIncident(incidentId: string): MaybePromise<SecurityEvent[]>;
 }
 
 export interface IdentityState {

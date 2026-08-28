@@ -8,5 +8,6 @@ export interface ControlPlaneRepository {
   getExecutionRecordByIdempotencyKey(idempotencyKey: string): ExecutionRecord | null;
   saveVerificationResult(result: VerificationResult): void;
   saveReasoningRun(run: ReasoningRun): void;
+  getReasoningRun(id: string): ReasoningRun | null;
   appendAuditEvent(event: AuditEvent): void;
 }

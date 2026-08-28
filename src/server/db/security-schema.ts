@@ -49,6 +49,11 @@ export function initializeSecuritySchema(db: Database.Database): void {
   ensureColumn(db, "audit_events", "proposal_version", "INTEGER");
   ensureColumn(db, "audit_events", "execution_id", "TEXT");
   ensureColumn(db, "audit_events", "lifecycle_version", "INTEGER");
+  ensureColumn(db, "reasoning_runs", "lifecycle_version", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn(db, "reasoning_runs", "prompt_version", "TEXT NOT NULL DEFAULT 'unknown'");
+  ensureColumn(db, "reasoning_runs", "latency_ms", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "reasoning_runs", "usage_json", "TEXT");
+  ensureColumn(db, "reasoning_runs", "failure_classification", "TEXT");
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_execution_idempotency_key ON execution_records(idempotency_key) WHERE idempotency_key <> ''");
 }
 

@@ -31,7 +31,10 @@ export const verificationResultSchema = z.object({
 export const reasoningRunSchema = z.object({
   id, subjectType: controlSubjectTypeSchema, subjectId: id,
   status: z.enum(["PENDING", "COMPLETED", "FAILED"]), inputHash: id,
-  output: jsonRecord.nullable(), model: z.string().nullable(), createdAt: timestamp, completedAt: timestamp.nullable(),
+  lifecycleVersion: z.number().int().positive(), promptVersion: id,
+  output: jsonRecord.nullable(), model: z.string().nullable(), latencyMs: z.number().int().nonnegative(),
+  usage: jsonRecord.nullable(), failureClassification: z.string().nullable(),
+  createdAt: timestamp, completedAt: timestamp.nullable(),
 });
 export const auditEventSchema = z.object({
   id, subjectType: controlSubjectTypeSchema, subjectId: id,

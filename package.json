@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:elastic": "node scripts/sync-inc-1001-to-elastic.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^12.2.0",

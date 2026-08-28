@@ -50,9 +50,9 @@ export function createWebMcpToolDefinitions(dependencies: {
         privilegeEvents: context.events.filter((event) => event.eventType.includes("PRIVILEGE")),
       } };
     }),
-    review_evidence_timeline: define("review_evidence_timeline", baseInput, factsOutput, (raw) => {
+    review_evidence_timeline: define("review_evidence_timeline", baseInput, factsOutput, async (raw) => {
       const input = baseInput.parse(raw);
-      return { kind: "evidence_timeline", facts: dependencies.eventSource.getEvidenceTimeline("INCIDENT", input.subjectId) };
+      return { kind: "evidence_timeline", facts: await dependencies.eventSource.getEvidenceTimeline("INCIDENT", input.subjectId) };
     }),
     prepare_containment: define("prepare_containment", prepareInput, draftOutput, (raw) => {
       const input = prepareInput.parse(raw);

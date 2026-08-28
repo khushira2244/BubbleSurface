@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { securityContextService } from "../container";
+import { securityContextService, securityEventSource } from "../container";
 import { SecurityContextNotFoundError, SecurityContextService } from "../domain/security/security-context.service";
+import type { SecurityEventSource } from "../integrations/security-ports";
 
 const entityIdSchema = z.string().trim().min(1).max(100).regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/);
 type Reader = (service: SecurityContextService, id: string) => unknown;
@@ -30,5 +31,22 @@ export const readFindingContext = (service?: SecurityContextService) => security
 export const readIdentityContext = (service?: SecurityContextService) => securityReadHandler((s, id) => s.getIdentityContext(id), service);
 export const readIdentitySessions = (service?: SecurityContextService) => securityReadHandler((s, id) => s.getActiveSessions(id), service);
 export const readIdentityPrivileges = (service?: SecurityContextService) => securityReadHandler((s, id) => s.getPrivileges(id), service);
-export const readIncidentEvents = (service?: SecurityContextService) => securityReadHandler((s, id) => s.getIncidentEvents(id), service);
+export const readIncidentEvents = (service = securityContextService, events: SecurityEventSource = securityEventSource) =>
+  async (_request: Request, context: { params: Promise<{ id: string }> }) => {
+    try {
+      const id = entityIdSchema.parse((await context.params).id);
+      service.getIncident(id);
+      return NextResponse.json({ data: await events.getEventsForIncident(id) });
+    } catch (error) {
+      if (error instanceof SecurityContextNotFoundError) return NextResponse.json({ error: {
+        code: error.code, message: error.message,
+      } }, { status: 404 });
+      if (error instanceof z.ZodError) return NextResponse.json({ error: {
+        code: "INVALID_ENTITY_ID", message: "The entity ID is invalid.", issues: error.issues,
+      } }, { status: 400 });
+      return NextResponse.json({ error: {
+        code: "SECURITY_EVENT_READ_FAILED", message: "Security events could not be read.",
+      } }, { status: 502 });
+    }
+  };
 export const readIncidentEvidence = (service?: SecurityContextService) => securityReadHandler((s, id) => s.getIncidentEvidence(id), service);

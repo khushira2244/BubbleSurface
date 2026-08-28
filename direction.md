@@ -107,3 +107,45 @@ For our compressed schedule I would reduce frontend to:
 > **one excellent investigation workspace + minimal setup/overview.**
 
 Most effort should go into the real integration, WebMCP behavior, state changes, and failure cases.
+Yes bro — **for proving WebMCP, we do not need a heavy frontend.**
+
+We only need enough page/UI for the browser context and human approval if required.
+
+The proof can be:
+
+```txt
+Level 1 — Chrome Tool Inspector + Gemini
+→ open BubbleSurface page
+→ tools register
+→ inspector lists them
+→ Gemini selects/calls them
+→ state changes
+→ old tool disappears / new tool appears
+→ invalid stale call gets blocked
+```
+
+That already proves the core WebMCP mechanism.
+
+Then:
+
+```txt
+Level 2 — ChatGPT browser/client
+→ open the same deployed BubbleSurface page
+→ ChatGPT discovers the site tools
+→ investigates through them
+→ uses the allowed capability
+→ reacts when capability changes
+```
+
+So our frontend can stay minimal:
+
+```txt
+incident state
+evidence summary
+approval button
+current capability status
+```
+
+No need for a huge SOC dashboard just to prove the technology.
+
+The actual demo strength comes from **real agent → real WebMCP tool → real backend state/policy → changed capability surface**, not from fancy CSS.

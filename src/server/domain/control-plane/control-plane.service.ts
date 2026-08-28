@@ -19,5 +19,6 @@ export class ControlPlaneService {
   }
   saveVerificationResult(input: VerificationResult): void { this.repository.saveVerificationResult(verificationResultSchema.parse(input)); }
   saveReasoningRun(input: ReasoningRun): void { this.repository.saveReasoningRun(reasoningRunSchema.parse(input)); }
+  getReasoningRun(id: string): ReasoningRun | null { return this.repository.getReasoningRun(id); }
   appendAuditEvent(input: AuditEvent): void { this.repository.appendAuditEvent(auditEventSchema.parse(input)); }
 }
