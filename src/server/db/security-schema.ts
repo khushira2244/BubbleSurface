@@ -45,6 +45,13 @@ export function initializeSecuritySchema(db: Database.Database): void {
   ensureColumn(db, "verification_results", "expected_state_json", "TEXT NOT NULL DEFAULT '{}'");
   ensureColumn(db, "verification_results", "observed_state_json", "TEXT NOT NULL DEFAULT '{}'");
   ensureColumn(db, "verification_results", "success", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "verification_results", "proposal_version", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn(db, "verification_results", "execution_id", "TEXT");
+  ensureColumn(db, "verification_results", "actor_id", "TEXT");
+  ensureColumn(db, "verification_results", "source", "TEXT NOT NULL DEFAULT 'unknown'");
+  ensureColumn(db, "verification_results", "started_at", "TEXT");
+  ensureColumn(db, "verification_results", "failure_classification", "TEXT");
+  ensureColumn(db, "verification_results", "idempotency_key", "TEXT");
   ensureColumn(db, "audit_events", "action_id", "TEXT");
   ensureColumn(db, "audit_events", "proposal_version", "INTEGER");
   ensureColumn(db, "audit_events", "execution_id", "TEXT");
@@ -55,6 +62,7 @@ export function initializeSecuritySchema(db: Database.Database): void {
   ensureColumn(db, "reasoning_runs", "usage_json", "TEXT");
   ensureColumn(db, "reasoning_runs", "failure_classification", "TEXT");
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_execution_idempotency_key ON execution_records(idempotency_key) WHERE idempotency_key <> ''");
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_verification_idempotency_key ON verification_results(idempotency_key) WHERE idempotency_key IS NOT NULL");
 }
 
 function ensureColumn(db: Database.Database, table: string, column: string, definition: string): void {

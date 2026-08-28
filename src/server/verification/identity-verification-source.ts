@@ -1,0 +1,1 @@
+export interface IdentityVerificationSource{observeIdentity(identityId:string):{identityExists:boolean;sessions:Array<{id:string;status:string;deviceId:string|null}>;privileges:Array<{id:string;status:string}>;trustedDeviceIds:string[]};}

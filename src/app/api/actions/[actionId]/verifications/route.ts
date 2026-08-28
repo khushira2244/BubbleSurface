@@ -1,0 +1,1 @@
+import{listVerifications}from"@/server/http/verification-read-http";export async function GET(_request:Request,{params}:{params:Promise<{actionId:string}>}){return listVerifications((await params).actionId);}

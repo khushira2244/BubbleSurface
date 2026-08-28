@@ -10,6 +10,8 @@ import {
   StaleProposalApprovalError,
 } from "../webmcp/tool-invocation.service";
 import { ToolTargetNotRelatedError } from "../webmcp/tool-definitions";
+import { ExecutionError } from "../execution/execution.errors";
+import { VerificationError } from "../verification/verification.errors";
 
 export function readBrowserCapabilities(subjectId: string): NextResponse {
   try {
@@ -41,6 +43,8 @@ export async function invokeBrowserTool(toolName: string, request: Request): Pro
 }
 
 function webMcpError(error: unknown): NextResponse {
+  if (error instanceof ExecutionError) return NextResponse.json({ error: { code:error.code,message:error.message } }, { status:error.httpStatus });
+  if (error instanceof VerificationError) return NextResponse.json({ error: { code:error.code,message:error.message } }, { status:error.httpStatus });
   if (error instanceof CapabilitySubjectNotFoundError) {
     return NextResponse.json({ error: { code: error.code, message: error.message } }, { status: 404 });
   }

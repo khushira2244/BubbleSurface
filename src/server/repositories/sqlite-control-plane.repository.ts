@@ -46,15 +46,28 @@ export class SqliteControlPlaneRepository implements ControlPlaneRepository {
     return r ? executionRecordSchema.parse({ id: r.id, actionId: r.action_id, proposalVersion: r.proposal_version,
       targetIdentifier: r.target_identifier, requestParameters: JSON.parse(String(r.request_parameters_json)),
       idempotencyKey: r.idempotency_key, status: r.status, startedAt: r.started_at, completedAt: r.completed_at,
-      error: r.error_json ? JSON.parse(String(r.error_json)) : null, externalAdapter: r.external_adapter }) : null;
+      error: r.error_json ? JSON.parse(String(r.error_json)) : null,
+      ...(r.result_json ? { result: JSON.parse(String(r.result_json)) } : {}), externalAdapter: r.external_adapter }) : null;
   }
+  updateExecutionRecord(x: ExecutionRecord): ExecutionRecord {
+    this.db.prepare("UPDATE execution_records SET status=?,result_json=?,started_at=?,completed_at=?,error_json=?,external_adapter=? WHERE id=?")
+      .run(x.status,x.result?JSON.stringify(x.result):null,x.startedAt,x.completedAt,x.error?JSON.stringify(x.error):null,x.externalAdapter,x.id);return x;
+  }
+  listExecutionRecords(actionId: string): ExecutionRecord[] { return (this.db.prepare("SELECT * FROM execution_records WHERE action_id=? ORDER BY COALESCE(started_at,'')").all(actionId) as Record<string,unknown>[]).map(r=>this.mapExecution(r)); }
+  getExecutionRecord(id:string):ExecutionRecord|null {const r=this.db.prepare("SELECT * FROM execution_records WHERE id=?").get(id) as Record<string,unknown>|undefined;return r?this.mapExecution(r):null;}
+  private mapExecution(r:Record<string,unknown>):ExecutionRecord{return executionRecordSchema.parse({id:r.id,actionId:r.action_id,proposalVersion:r.proposal_version,targetIdentifier:r.target_identifier,requestParameters:JSON.parse(String(r.request_parameters_json)),idempotencyKey:r.idempotency_key,status:r.status,startedAt:r.started_at,completedAt:r.completed_at,error:r.error_json?JSON.parse(String(r.error_json)):null,...(r.result_json?{result:JSON.parse(String(r.result_json))}:{}),externalAdapter:r.external_adapter});}
   saveVerificationResult(x: VerificationResult): void {
     this.db.prepare(`INSERT INTO verification_results
-      (id,subject_type,subject_id,action_id,status,observations_json,observed_at,verification_type,expected_state_json,observed_state_json,success)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(x.id, x.subjectType, x.subjectId, x.actionId,
+      (id,subject_type,subject_id,action_id,status,observations_json,observed_at,verification_type,expected_state_json,observed_state_json,success,proposal_version,execution_id,actor_id,source,started_at,failure_classification,idempotency_key)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(x.id, x.subjectType, x.subjectId, x.actionId,
         x.success ? "SUCCEEDED" : "FAILED", JSON.stringify(x.details), x.checkedAt, x.verificationType,
-        JSON.stringify(x.expectedState), JSON.stringify(x.observedState), x.success ? 1 : 0);
+        JSON.stringify(x.expectedState), JSON.stringify(x.observedState), x.success ? 1 : 0,x.proposalVersion??1,
+        x.executionId??null,x.actorId??null,x.source??"unknown",x.startedAt??x.checkedAt,x.failureClassification??null,x.idempotencyKey??null);
   }
+  listVerificationResults(actionId:string):VerificationResult[]{return(this.db.prepare("SELECT * FROM verification_results WHERE action_id=? ORDER BY observed_at").all(actionId)as Record<string,unknown>[]).map(r=>this.mapVerification(r));}
+  getVerificationResult(id:string):VerificationResult|null{const r=this.db.prepare("SELECT * FROM verification_results WHERE id=?").get(id)as Record<string,unknown>|undefined;return r?this.mapVerification(r):null;}
+  getVerificationByIdempotencyKey(key:string):VerificationResult|null{const r=this.db.prepare("SELECT * FROM verification_results WHERE idempotency_key=?").get(key)as Record<string,unknown>|undefined;return r?this.mapVerification(r):null;}
+  private mapVerification(r:Record<string,unknown>):VerificationResult{return {id:String(r.id),subjectType:r.subject_type as "INCIDENT"|"FINDING",subjectId:String(r.subject_id),actionId:String(r.action_id),proposalVersion:Number(r.proposal_version),executionId:r.execution_id?String(r.execution_id):null,verificationType:String(r.verification_type),expectedState:JSON.parse(String(r.expected_state_json)),observedState:JSON.parse(String(r.observed_state_json)),success:Boolean(r.success),checkedAt:String(r.observed_at),details:JSON.parse(String(r.observations_json)),actorId:r.actor_id?String(r.actor_id):undefined,source:String(r.source),startedAt:String(r.started_at),failureClassification:r.failure_classification?String(r.failure_classification):null,idempotencyKey:r.idempotency_key?String(r.idempotency_key):undefined};}
   saveReasoningRun(x: ReasoningRun): void {
     this.db.prepare(`INSERT INTO reasoning_runs
       (id,subject_type,subject_id,status,input_hash,output_json,model,created_at,completed_at,lifecycle_version,prompt_version,latency_ms,usage_json,failure_classification)

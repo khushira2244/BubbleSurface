@@ -24,6 +24,8 @@ export class ToolTargetNotRelatedError extends Error {
 export function createWebMcpToolDefinitions(dependencies: {
   securityContext: SecurityContextService; identityProvider: IdentityProvider; eventSource: SecurityEventSource;
   evidenceValidator: EvidenceReferenceValidator;
+  executeApprovedAction?: (input: {subjectId:string;expectedLifecycleVersion:number;actionId:string;proposalVersion:number;idempotencyKey:string}, actorId:string, actionType:"REVOKE_SESSIONS"|"REMOVE_PRIVILEGE") => Promise<unknown>;
+  verifyApprovedAction?: (input: {subjectId:string;expectedLifecycleVersion:number;actionId:string;proposalVersion:number;idempotencyKey:string}, actorId:string, kind:"VERIFY_CONTAINMENT"|"VERIFY_IDENTITY_STATE") => Promise<unknown> | unknown;
 }): Record<WebMcpToolName, WebMcpToolDefinition> {
   const define = (name: WebMcpToolName, inputSchema: z.ZodType, outputSchema: z.ZodType,
     execute: WebMcpToolDefinition["execute"]): WebMcpToolDefinition => ({ name,
@@ -60,17 +62,11 @@ export function createWebMcpToolDefinitions(dependencies: {
       return { status: "DRAFT", subjectId: input.subjectId, lifecycleVersion: input.expectedLifecycleVersion,
         requestedActions: input.requestedActions, evidenceRefs: input.evidenceRefs };
     }),
-    revoke_approved_sessions: define("revoke_approved_sessions", actionInput, boundaryOutput, () => ({
-      status: "NOT_EXECUTED", boundary: "REMEDIATION_EXECUTION", message: "No session side effect is implemented in Day 1.",
-    })),
-    remove_approved_privilege: define("remove_approved_privilege", actionInput, boundaryOutput, () => ({
-      status: "NOT_EXECUTED", boundary: "REMEDIATION_EXECUTION", message: "No privilege side effect is implemented in Day 1.",
-    })),
-    verify_containment: define("verify_containment", actionInput, boundaryOutput, () => ({
-      status: "NOT_EXECUTED", boundary: "VERIFICATION", message: "Verification execution is intentionally deferred.",
-    })),
-    verify_identity_state: define("verify_identity_state", actionInput, boundaryOutput, () => ({
-      status: "NOT_EXECUTED", boundary: "VERIFICATION", message: "Verification execution is intentionally deferred.",
-    })),
+    revoke_approved_sessions: define("revoke_approved_sessions", actionInput, z.unknown(), async (raw,context) => dependencies.executeApprovedAction
+      ? dependencies.executeApprovedAction(actionInput.parse(raw),context.actorId,"REVOKE_SESSIONS") : ({status:"NOT_EXECUTED"})),
+    remove_approved_privilege: define("remove_approved_privilege", actionInput, z.unknown(), async (raw,context) => dependencies.executeApprovedAction
+      ? dependencies.executeApprovedAction(actionInput.parse(raw),context.actorId,"REMOVE_PRIVILEGE") : ({status:"NOT_EXECUTED"})),
+    verify_containment: define("verify_containment", actionInput, z.unknown(), async(raw,context)=>dependencies.verifyApprovedAction?dependencies.verifyApprovedAction(actionInput.parse(raw),context.actorId,"VERIFY_CONTAINMENT"):({status:"NOT_EXECUTED"})),
+    verify_identity_state: define("verify_identity_state", actionInput, z.unknown(), async(raw,context)=>dependencies.verifyApprovedAction?dependencies.verifyApprovedAction(actionInput.parse(raw),context.actorId,"VERIFY_IDENTITY_STATE"):({status:"NOT_EXECUTED"})),
   };
 }

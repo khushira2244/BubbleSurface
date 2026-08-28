@@ -21,12 +21,15 @@ export const executionRecordSchema = z.object({
   requestParameters: jsonRecord, idempotencyKey: id,
   status: z.enum(["PENDING", "IN_PROGRESS", "SUCCEEDED", "FAILED", "UNKNOWN"]),
   startedAt: timestamp.nullable(), completedAt: timestamp.nullable(), error: jsonRecord.nullable(),
-  externalAdapter: z.string().nullable(),
+  result: jsonRecord.nullable().optional(), externalAdapter: z.string().nullable(),
 });
 export const verificationResultSchema = z.object({
   id, subjectType: controlSubjectTypeSchema, subjectId: id, actionId: id,
+  proposalVersion: z.number().int().positive().optional(), executionId: id.nullable().optional(),
   verificationType: id, expectedState: jsonRecord, observedState: jsonRecord,
   success: z.boolean(), checkedAt: timestamp, details: jsonRecord,
+  actorId: id.optional(), source: id.optional(), startedAt: timestamp.optional(),
+  failureClassification: z.string().nullable().optional(), idempotencyKey: id.optional(),
 });
 export const reasoningRunSchema = z.object({
   id, subjectType: controlSubjectTypeSchema, subjectId: id,

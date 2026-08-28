@@ -22,6 +22,10 @@ import { SecurityReasoningService } from "./reasoning/security-reasoning.service
 import { ReasoningProviderError } from "./reasoning/reasoning.errors";
 import { SqliteProposalReviewRepository } from "./review/sqlite-proposal-review.repository";
 import { ProposalReviewService } from "./review/proposal-review.service";
+import { DemoIdentityActionExecutor } from "./execution/demo-identity-action.executor";
+import { ActionExecutionService } from "./execution/action-execution.service";
+import { ActionVerificationService } from "./verification/action-verification.service";
+import { DemoIdentityVerificationSource } from "./verification/demo-identity-verification.source";
 
 seedSecurityData(db);
 const securityRepository = new SqliteSecurityContextRepository(db);
@@ -36,8 +40,16 @@ export const controlPlaneService = new ControlPlaneService(
 export const identityProvider = new SqliteIdentityAdapter(securityRepository);
 export const securityEventSource = createSecurityEventSource(db, getIntegrationConfig());
 export const capabilityContextService = new CapabilityContextService(new SqliteCapabilityContextRepository(db));
+const proposalReviewRepository = new SqliteProposalReviewRepository(db);
+export const actionExecutionService = new ActionExecutionService(proposalReviewRepository,controlPlaneService,
+  securityContextService,lifecycleService,new DemoIdentityActionExecutor(db));
+export const actionVerificationService = new ActionVerificationService(proposalReviewRepository,controlPlaneService,
+  securityContextService,lifecycleService,new DemoIdentityVerificationSource(db));
 export const webMcpTools = createWebMcpToolDefinitions({ securityContext: securityContextService, identityProvider,
-  eventSource: securityEventSource, evidenceValidator: evidenceReferenceValidator });
+  eventSource: securityEventSource, evidenceValidator: evidenceReferenceValidator,
+  executeApprovedAction:(input,actorId,expectedActionType)=>actionExecutionService.execute({...input,actorId,expectedActionType}),
+  verifyApprovedAction:(input,actorId,kind)=>actionVerificationService.verify({...input,actorId,kind}) });
+  
 export const webMcpAudit = new ControlPlaneWebMcpAuditRecorder(controlPlaneService);
 export const webMcpInvocationService = new ToolInvocationService(capabilityContextService, webMcpTools, webMcpAudit);
 export const createCapabilityRefreshService = (browser: BrowserWebMcpAdapter) =>
@@ -52,5 +64,5 @@ const reasoningModelClient = integrationConfig.OPENAI_API_KEY
   : unavailableReasoningClient;
 export const securityReasoningService = new SecurityReasoningService(securityContextService, securityEventSource,
   evidenceReferenceValidator, controlPlaneService, reasoningModelClient);
-export const proposalReviewService = new ProposalReviewService(new SqliteProposalReviewRepository(db),
+export const proposalReviewService = new ProposalReviewService(proposalReviewRepository,
   controlPlaneService, securityContextService, evidenceReferenceValidator, lifecycleService);

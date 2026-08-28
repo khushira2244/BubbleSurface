@@ -14,10 +14,16 @@ export class ControlPlaneService {
   saveExecutionRecord(input: ExecutionRecord): ExecutionRecord {
     return this.repository.saveExecutionRecord(executionRecordSchema.parse(input));
   }
+  updateExecutionRecord(input: ExecutionRecord): ExecutionRecord { return this.repository.updateExecutionRecord(executionRecordSchema.parse(input)); }
+  listExecutionRecords(actionId: string): ExecutionRecord[] { return this.repository.listExecutionRecords(actionId); }
+  getExecutionRecord(id: string): ExecutionRecord | null { return this.repository.getExecutionRecord(id); }
   getExecutionRecordByIdempotencyKey(idempotencyKey: string): ExecutionRecord | null {
     return this.repository.getExecutionRecordByIdempotencyKey(idempotencyKey);
   }
   saveVerificationResult(input: VerificationResult): void { this.repository.saveVerificationResult(verificationResultSchema.parse(input)); }
+  listVerificationResults(actionId: string): VerificationResult[] { return this.repository.listVerificationResults(actionId); }
+  getVerificationResult(id: string): VerificationResult | null { return this.repository.getVerificationResult(id); }
+  getVerificationByIdempotencyKey(key: string): VerificationResult | null { return this.repository.getVerificationByIdempotencyKey(key); }
   saveReasoningRun(input: ReasoningRun): void { this.repository.saveReasoningRun(reasoningRunSchema.parse(input)); }
   getReasoningRun(id: string): ReasoningRun | null { return this.repository.getReasoningRun(id); }
   appendAuditEvent(input: AuditEvent): void { this.repository.appendAuditEvent(auditEventSchema.parse(input)); }
