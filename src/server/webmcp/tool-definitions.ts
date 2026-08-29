@@ -36,19 +36,19 @@ export function createWebMcpToolDefinitions(dependencies: {
       const input = baseInput.parse(raw);
       return { kind: "incident_context", facts: dependencies.securityContext.getIncidentContext(input.subjectId) };
     }),
-    get_active_sessions: define("get_active_sessions", baseInput, factsOutput, (raw) => {
+    get_active_sessions: define("get_active_sessions", baseInput, factsOutput, async (raw) => {
       const input = baseInput.parse(raw), context = dependencies.securityContext.getIncidentContext(input.subjectId);
-      return { kind: "active_sessions", facts: context.identity ? dependencies.identityProvider.getActiveSessions(context.identity.id) : [] };
+      return { kind: "active_sessions", facts: context.identity ? await dependencies.identityProvider.getActiveSessions(context.identity.id) : [] };
     }),
     get_device_context: define("get_device_context", deviceInput, factsOutput, (raw) => {
       const input = deviceInput.parse(raw), context = dependencies.securityContext.getIncidentContext(input.subjectId);
       if (!context.devices.some((device) => device.id === input.deviceId)) throw new ToolTargetNotRelatedError(`Device ${input.deviceId} is not related to incident ${input.subjectId}.`);
       return { kind: "device_context", facts: dependencies.securityContext.getDeviceContext(input.deviceId) };
     }),
-    check_privilege_changes: define("check_privilege_changes", baseInput, factsOutput, (raw) => {
+    check_privilege_changes: define("check_privilege_changes", baseInput, factsOutput, async (raw) => {
       const input = baseInput.parse(raw), context = dependencies.securityContext.getIncidentContext(input.subjectId);
       return { kind: "privilege_context", facts: {
-        currentPrivileges: context.privileges,
+        currentPrivileges: context.identity ? await dependencies.identityProvider.getGroupsOrPrivileges(context.identity.id) : [],
         privilegeEvents: context.events.filter((event) => event.eventType.includes("PRIVILEGE")),
       } };
     }),

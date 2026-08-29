@@ -3,11 +3,16 @@ import { z } from "zod";
 const integrationEnvironmentSchema = z.object({
   SECURITY_EVENT_SOURCE: z.enum(["sqlite", "elastic"]).default("sqlite"),
   OPENAI_API_KEY: z.string().min(1).optional(), OPENAI_MODEL: z.string().min(1).default("gpt-5.4"),
+  IDENTITY_PROVIDER: z.enum(["demo", "auth0"]).default("demo"),
+  AUTH0_DOMAIN: z.string().min(1).optional(), AUTH0_CLIENT_ID: z.string().min(1).optional(),
+  AUTH0_CLIENT_SECRET: z.string().min(1).optional(), AUTH0_MANAGEMENT_AUDIENCE: z.url().optional(),
+  AUTH0_ASHA_USER_ID: z.string().min(1).optional(),
   ELASTIC_ENDPOINT: z.url().optional(), ELASTIC_API_KEY: z.string().min(1).optional(),
   OKTA_ORG_URL: z.url().optional(), OKTA_API_TOKEN: z.string().min(1).optional(),
   OKTA_CLIENT_ID: z.string().min(1).optional(), OKTA_CLIENT_SECRET: z.string().min(1).optional(),
 }).superRefine((value, context) => {
   if (value.SECURITY_EVENT_SOURCE === "elastic" && (!value.ELASTIC_ENDPOINT || !value.ELASTIC_API_KEY)) context.addIssue({ code: "custom", message: "Elastic endpoint and API key are required when SECURITY_EVENT_SOURCE=elastic." });
+  if (value.IDENTITY_PROVIDER === "auth0" && (!value.AUTH0_DOMAIN || !value.AUTH0_CLIENT_ID || !value.AUTH0_CLIENT_SECRET || !value.AUTH0_MANAGEMENT_AUDIENCE || !value.AUTH0_ASHA_USER_ID)) context.addIssue({ code:"custom",message:"Auth0 domain, client credentials, audience, and Asha user mapping are required when IDENTITY_PROVIDER=auth0." });
   if (value.ELASTIC_ENDPOINT && !value.ELASTIC_API_KEY) context.addIssue({ code: "custom", message: "ELASTIC_API_KEY is required when ELASTIC_ENDPOINT is set." });
   if (value.OKTA_ORG_URL && !value.OKTA_API_TOKEN && !(value.OKTA_CLIENT_ID && value.OKTA_CLIENT_SECRET)) context.addIssue({ code: "custom", message: "Okta credentials are required when OKTA_ORG_URL is set." });
 });

@@ -1,0 +1,8 @@
+import type{IdentityProvider,IdentityState}from"../security-ports";import type{Identity,Privilege}from"../../domain/security/security.schemas";import type{Auth0ManagementClient}from"./auth0-management.client";
+export const AUTH0_FINANCE_ROLE_NAME="Finance Administrator";export const FINANCE_PRIVILEGE_ID="PRV-ASHA-FINADMIN";
+export class Auth0IdentityAdapter implements IdentityProvider{readonly provider="auth0" as const;constructor(private readonly client:Auth0ManagementClient,private readonly fallback:IdentityProvider,private readonly ashaUserId:string){}private mapped(id:string){return id==="IDN-ASHA";}
+ async getIdentity(id:string):Promise<Identity|null>{if(!this.mapped(id))return this.fallback.getIdentity(id);const[base,user]=await Promise.all([this.fallback.getIdentity(id),this.client.getUser(this.ashaUserId)]);return base?{...base,displayName:user.name??base.displayName,email:user.email??base.email,source:"auth0"}:null;}
+ async getGroupsOrPrivileges(id:string):Promise<Privilege[]>{const local=await this.fallback.getGroupsOrPrivileges(id);if(!this.mapped(id))return local;const roles=await this.client.getUserRoles(this.ashaUserId),active=roles.some(role=>role.name===AUTH0_FINANCE_ROLE_NAME);return local.map(privilege=>privilege.id===FINANCE_PRIVILEGE_ID?{...privilege,status:active?"ACTIVE":"REVOKED",revokedAt:active?null:new Date().toISOString()}:privilege);}
+ getActiveSessions(id:string){return this.fallback.getActiveSessions(id);}
+ async getIdentityState(id:string):Promise<IdentityState|null>{const[identity,sessions,privileges]=await Promise.all([this.getIdentity(id),this.getActiveSessions(id),this.getGroupsOrPrivileges(id)]);return identity?{identity,sessions,privileges}:null;}
+}

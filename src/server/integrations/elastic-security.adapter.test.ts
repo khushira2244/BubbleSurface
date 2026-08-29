@@ -32,7 +32,7 @@ describe("ElasticSecurityAdapter", () => {
   });
   it("falls back to SQLite when Elastic is not selected", () => {
     db = new Database(":memory:"); initializeSecuritySchema(db);
-    expect(createSecurityEventSource(db, { SECURITY_EVENT_SOURCE: "sqlite", OPENAI_MODEL: "gpt-5.4" }))
+    expect(createSecurityEventSource(db, { SECURITY_EVENT_SOURCE: "sqlite", OPENAI_MODEL: "gpt-5.4", IDENTITY_PROVIDER: "demo" }))
       .toBeInstanceOf(SqliteSecurityEventAdapter);
   });
 });

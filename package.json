@@ -8,7 +8,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "seed:elastic": "node scripts/sync-inc-1001-to-elastic.mjs"
+    "seed:elastic": "node scripts/sync-inc-1001-to-elastic.mjs",
+    "reset:demo": "node --require ./scripts/tsx-platform-preload.cjs --import tsx scripts/reset-demo.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.2.0",
@@ -22,6 +23,7 @@
     "@types/node": "^22.18.0",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }

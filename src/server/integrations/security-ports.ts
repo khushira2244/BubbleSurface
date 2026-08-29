@@ -25,10 +25,11 @@ export interface IdentityState {
   privileges: Privilege[];
 }
 export interface IdentityProvider {
-  getIdentity(identityId: string): Identity | null;
-  getGroupsOrPrivileges(identityId: string): Privilege[];
-  getActiveSessions(identityId: string): Session[];
-  getIdentityState(identityId: string): IdentityState | null;
+  readonly provider?: "demo" | "auth0";
+  getIdentity(identityId: string): MaybePromise<Identity | null>;
+  getGroupsOrPrivileges(identityId: string): MaybePromise<Privilege[]>;
+  getActiveSessions(identityId: string): MaybePromise<Session[]>;
+  getIdentityState(identityId: string): MaybePromise<IdentityState | null>;
   revokeSession?(sessionId: string, idempotencyKey: string): Promise<unknown>;
   removePrivilege?(privilegeId: string, idempotencyKey: string): Promise<unknown>;
 }

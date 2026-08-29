@@ -1,0 +1,2 @@
+export class Auth0ProviderError extends Error{constructor(readonly code:string,message:string,readonly status:number|null=null,readonly requestId:string|null=null){super(message);}}
+export const auth0Error=(status:number,message:string,requestId:string|null)=>new Auth0ProviderError(status===401?"AUTH0_UNAUTHORIZED":status===403?"AUTH0_FORBIDDEN":status===404?"AUTH0_NOT_FOUND":status===429?"AUTH0_RATE_LIMITED":status>=500?"AUTH0_UPSTREAM_FAILURE":"AUTH0_REQUEST_FAILED",message,status,requestId);

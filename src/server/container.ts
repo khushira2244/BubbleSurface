@@ -7,7 +7,6 @@ import { seedSecurityData } from "./seed/seed-security-data";
 import { EvidenceReferenceValidator } from "./domain/control-plane/evidence-reference.validator";
 import { ControlPlaneService } from "./domain/control-plane/control-plane.service";
 import { SqliteControlPlaneRepository } from "./repositories/sqlite-control-plane.repository";
-import { SqliteIdentityAdapter } from "./integrations/sqlite-identity.adapter";
 import { createSecurityEventSource } from "./integrations/security-event-source.factory";
 import { getIntegrationConfig } from "./config/integrations";
 import { CapabilityContextService } from "./webmcp/capability-context.service";
@@ -26,8 +25,10 @@ import { DemoIdentityActionExecutor } from "./execution/demo-identity-action.exe
 import { ActionExecutionService } from "./execution/action-execution.service";
 import { ActionVerificationService } from "./verification/action-verification.service";
 import { DemoIdentityVerificationSource } from "./verification/demo-identity-verification.source";
+import { createIdentityIntegration } from "./integrations/identity-integration.factory";
 
 seedSecurityData(db);
+const integrationConfig = getIntegrationConfig();
 const securityRepository = new SqliteSecurityContextRepository(db);
 export const lifecycleService = new LifecycleService(new SqliteCaseRepository(db));
 export const securityContextService = new SecurityContextService(securityRepository);
@@ -37,14 +38,15 @@ export const controlPlaneService = new ControlPlaneService(
   controlPlaneRepository,
   evidenceReferenceValidator,
 );
-export const identityProvider = new SqliteIdentityAdapter(securityRepository);
-export const securityEventSource = createSecurityEventSource(db, getIntegrationConfig());
+const identityIntegration=createIdentityIntegration(db,securityRepository,integrationConfig);
+export const identityProvider = identityIntegration.provider;
+export const securityEventSource = createSecurityEventSource(db, integrationConfig);
 export const capabilityContextService = new CapabilityContextService(new SqliteCapabilityContextRepository(db));
 const proposalReviewRepository = new SqliteProposalReviewRepository(db);
 export const actionExecutionService = new ActionExecutionService(proposalReviewRepository,controlPlaneService,
-  securityContextService,lifecycleService,new DemoIdentityActionExecutor(db));
+  securityContextService,lifecycleService,identityIntegration.executor);
 export const actionVerificationService = new ActionVerificationService(proposalReviewRepository,controlPlaneService,
-  securityContextService,lifecycleService,new DemoIdentityVerificationSource(db));
+  securityContextService,lifecycleService,identityIntegration.verification);
 export const webMcpTools = createWebMcpToolDefinitions({ securityContext: securityContextService, identityProvider,
   eventSource: securityEventSource, evidenceValidator: evidenceReferenceValidator,
   executeApprovedAction:(input,actorId,expectedActionType)=>actionExecutionService.execute({...input,actorId,expectedActionType}),
@@ -55,7 +57,6 @@ export const webMcpInvocationService = new ToolInvocationService(capabilityConte
 export const createCapabilityRefreshService = (browser: BrowserWebMcpAdapter) =>
   new CapabilityRefreshService(capabilityContextService, webMcpTools, webMcpInvocationService, browser, webMcpAudit);
 
-const integrationConfig = getIntegrationConfig();
 const unavailableReasoningClient: ReasoningModelClient = { createStructuredResponse: async () => {
   throw new ReasoningProviderError("REASONING_NOT_CONFIGURED", "OPENAI_API_KEY is not configured.");
 } };

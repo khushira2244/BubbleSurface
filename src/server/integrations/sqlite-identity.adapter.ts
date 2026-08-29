@@ -2,6 +2,7 @@ import type { SecurityContextRepository } from "../domain/security/security.repo
 import type { IdentityProvider } from "./security-ports";
 
 export class SqliteIdentityAdapter implements IdentityProvider {
+  readonly provider = "demo" as const;
   constructor(private readonly repository: SecurityContextRepository) {}
   getIdentity(identityId: string) { return this.repository.getIdentity(identityId); }
   getGroupsOrPrivileges(identityId: string) { return this.repository.getPrivilegesForIdentity(identityId); }
