@@ -13,6 +13,7 @@ import { ToolTargetNotRelatedError } from "../webmcp/tool-definitions";
 import { ExecutionError } from "../execution/execution.errors";
 import { VerificationError } from "../verification/verification.errors";
 import { demoBrowserPrincipalResolver } from "../webmcp/demo-principal-resolver";
+import type { PrincipalResolver } from "../webmcp/integration-contracts";
 
 export function readBrowserCapabilities(subjectId: string): NextResponse {
   try {
@@ -33,12 +34,13 @@ export function readBrowserCapabilities(subjectId: string): NextResponse {
   }
 }
 
-export async function invokeBrowserTool(toolName: string, request: Request): Promise<NextResponse> {
+export async function invokeBrowserTool(toolName: string, request: Request,
+  invocation=webMcpInvocationService,principalResolver:PrincipalResolver<Request>=demoBrowserPrincipalResolver): Promise<NextResponse> {
   try {
-    const principal = await demoBrowserPrincipalResolver.resolve(request);
+    const principal = await principalResolver.resolve(request);
     const parsedToolName = webMcpToolNameSchema.parse(toolName);
     const input = await request.json();
-    return NextResponse.json(await webMcpInvocationService.invoke(parsedToolName, input, principal.id));
+    return NextResponse.json(await invocation.invoke(parsedToolName, input, principal.id));
   } catch (error) {
     return webMcpError(error);
   }

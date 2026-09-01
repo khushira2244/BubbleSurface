@@ -16,4 +16,5 @@ export interface ControlPlaneRepository {
   saveReasoningRun(run: ReasoningRun): void;
   getReasoningRun(id: string): ReasoningRun | null;
   appendAuditEvent(event: AuditEvent): void;
+  listAuditEvents(subjectType: AuditEvent["subjectType"], subjectId: string): AuditEvent[];
 }

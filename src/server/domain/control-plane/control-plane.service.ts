@@ -27,4 +27,7 @@ export class ControlPlaneService {
   saveReasoningRun(input: ReasoningRun): void { this.repository.saveReasoningRun(reasoningRunSchema.parse(input)); }
   getReasoningRun(id: string): ReasoningRun | null { return this.repository.getReasoningRun(id); }
   appendAuditEvent(input: AuditEvent): void { this.repository.appendAuditEvent(auditEventSchema.parse(input)); }
+  listAuditEvents(subjectType: AuditEvent["subjectType"], subjectId: string): AuditEvent[] {
+    return this.repository.listAuditEvents(subjectType, subjectId);
+  }
 }

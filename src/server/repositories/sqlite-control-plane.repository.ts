@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import { actionProposalSchema, executionRecordSchema, reasoningRunSchema, type ActionProposal, type ApprovalDecision, type AuditEvent, type ExecutionRecord, type ReasoningRun, type VerificationResult } from "../domain/control-plane/control-plane.schemas";
+import { actionProposalSchema, auditEventSchema, executionRecordSchema, reasoningRunSchema, type ActionProposal, type ApprovalDecision, type AuditEvent, type ExecutionRecord, type ReasoningRun, type VerificationResult } from "../domain/control-plane/control-plane.schemas";
 import type { ControlPlaneRepository } from "../domain/control-plane/control-plane.repository";
 
 export class SqliteControlPlaneRepository implements ControlPlaneRepository {
@@ -89,4 +89,9 @@ export class SqliteControlPlaneRepository implements ControlPlaneRepository {
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(x.id, x.subjectType, x.subjectId, x.actorType, x.actorId,
         x.eventType, x.source, JSON.stringify(x.metadata), x.occurredAt, x.actionId, x.proposalVersion, x.executionId, x.lifecycleVersion);
   }
+  listAuditEvents(subjectType:AuditEvent["subjectType"],subjectId:string):AuditEvent[]{return(this.db.prepare(
+    "SELECT * FROM audit_events WHERE subject_type=? AND subject_id=? ORDER BY occurred_at,rowid").all(subjectType,subjectId)as Record<string,unknown>[]).map(r=>auditEventSchema.parse({
+      id:r.id,subjectType:r.subject_type,subjectId:r.subject_id,actorType:r.actor_type,actorId:r.actor_id,
+      eventType:r.event_type,actionId:r.action_id,proposalVersion:r.proposal_version,executionId:r.execution_id,
+      lifecycleVersion:r.lifecycle_version,source:r.source,metadata:JSON.parse(String(r.details_json)),occurredAt:r.occurred_at}));}
 }

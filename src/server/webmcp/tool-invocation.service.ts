@@ -65,8 +65,16 @@ export class ToolInvocationService {
       throw new CapabilityNotAllowedError(toolName, decision.reasonCode, decision.reason);
     }
     this.audit.record("WEBMCP_TOOL_CALLED", context, toolName, tool.classification, { actorId });
-    const output = await tool.execute(input, { subjectId: input.subjectId,
-      expectedLifecycleVersion: input.expectedLifecycleVersion, actorId });
-    return tool.outputSchema.parse(output);
+    try {
+      const output = await tool.execute(input, { subjectId: input.subjectId,
+        expectedLifecycleVersion: input.expectedLifecycleVersion, actorId });
+      const parsed = tool.outputSchema.parse(output);
+      this.audit.record("WEBMCP_TOOL_SUCCEEDED", context, toolName, tool.classification, { actorId });
+      return parsed;
+    } catch (cause) {
+      this.audit.record("WEBMCP_TOOL_FAILED", context, toolName, tool.classification, { actorId,
+        errorCode: cause && typeof cause === "object" && "code" in cause ? String(cause.code) : "TOOL_EXECUTION_FAILED" });
+      throw cause;
+    }
   }
 }

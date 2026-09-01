@@ -1,10 +1,12 @@
-import Link from "next/link";
-import styles from "@/components/demo/demo.module.css";
+import { LiveWorkspace } from "@/components/demo/live-workspace";
+import { buildLiveWorkspaceModel } from "@/components/demo/live-workspace.model";
+import { capabilityContextService, securityContextService } from "@/server/container";
+import { evaluateCapabilities } from "@/server/webmcp/capability-policy";
 
-export default function LiveDemoPlaceholderPage() {
-  return <main className={`${styles.page} ${styles.placeholderPage}`}><section className={styles.placeholderCard}>
-    <span className={styles.eyebrow}>Live test workspace</span><h1>The governed test is next.</h1>
-    <p>This route is reserved for the live incident workspace. No agent simulation, approval flow, or execution behavior has been added here yet.</p>
-    <Link className={styles.secondaryButton} href="/demo/test-case">← Back to test case</Link>
-  </section></main>;
+export const dynamic = "force-dynamic";
+
+export default function LiveDemoPage() {
+  const incident = securityContextService.getIncidentContext("INC-1001");
+  const capabilities = evaluateCapabilities(capabilityContextService.load("INCIDENT", "INC-1001")).allowed;
+  return <LiveWorkspace model={buildLiveWorkspaceModel(incident, capabilities.map(({ toolName, classification }) => ({ toolName, classification })))}/>;
 }

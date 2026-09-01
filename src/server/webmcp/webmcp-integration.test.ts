@@ -54,7 +54,19 @@ describe("WebMCP capability infrastructure", () => {
     await expect(invocations.invoke("inspect_incident", { subjectId: "INC-1001", expectedLifecycleVersion: 3 }))
       .rejects.toBeInstanceOf(StaleCapabilityContextError);
     const events = db.prepare("SELECT event_type FROM audit_events ORDER BY occurred_at").all() as Array<{ event_type: string }>;
-    expect(events.map((event) => event.event_type)).toEqual(["WEBMCP_TOOL_CALLED", "WEBMCP_TOOL_BLOCKED"]);
+    expect(events.map((event) => event.event_type)).toEqual(["WEBMCP_TOOL_CALLED", "WEBMCP_TOOL_SUCCEEDED", "WEBMCP_TOOL_BLOCKED"]);
+  });
+
+  it("returns repository/provider-backed investigation facts without changing lifecycle or exposing execution",async()=>{
+    const before=contexts.load("INCIDENT","INC-1001");
+    const privilege=await invocations.invoke("check_privilege_changes",{subjectId:"INC-1001",expectedLifecycleVersion:before.lifecycleVersion}) as {facts:{currentPrivileges:Array<{name:string}>;privilegeEvents:Array<{summary:string}>}};
+    const sessions=await invocations.invoke("get_active_sessions",{subjectId:"INC-1001",expectedLifecycleVersion:before.lifecycleVersion}) as {facts:Array<{id:string;location:string}>};
+    expect(privilege.facts.currentPrivileges).toEqual(expect.arrayContaining([expect.objectContaining({name:"finance-admin"})]));
+    expect(privilege.facts.privilegeEvents[0].summary).toContain("outside the normal change window");
+    expect(sessions.facts).toEqual(expect.arrayContaining([expect.objectContaining({id:"SES-ASHA-SUSPICIOUS",location:"Frankfurt, DE"})]));
+    const after=contexts.load("INCIDENT","INC-1001");expect(after.lifecycleVersion).toBe(before.lifecycleVersion);
+    expect(after.lifecycleState).toBe(before.lifecycleState);expect(after.proposalAuthorities).toEqual(before.proposalAuthorities);
+    expect((await refresh.refreshCapabilities("INCIDENT","INC-1001")).registered).not.toEqual(expect.arrayContaining(["revoke_approved_sessions","remove_approved_privilege"]));
   });
 
   it("refreshes only registry deltas across lifecycle and approval changes", async () => {

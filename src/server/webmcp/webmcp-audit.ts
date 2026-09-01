@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { ControlPlaneService } from "../domain/control-plane/control-plane.service";
 import type { CapabilityContext, ToolClassification, WebMcpToolName } from "./capability.types";
 
-export type WebMcpAuditEventType = "WEBMCP_TOOL_REGISTERED" | "WEBMCP_TOOL_UNREGISTERED" | "WEBMCP_TOOL_CALLED" | "WEBMCP_TOOL_BLOCKED";
+export type WebMcpAuditEventType = "WEBMCP_TOOL_REGISTERED" | "WEBMCP_TOOL_UNREGISTERED" | "WEBMCP_TOOL_CALLED" | "WEBMCP_TOOL_SUCCEEDED" | "WEBMCP_TOOL_FAILED" | "WEBMCP_TOOL_BLOCKED";
 export interface WebMcpAuditRecorder {
   record(type: WebMcpAuditEventType, context: CapabilityContext, toolName: WebMcpToolName,
     classification: ToolClassification, metadata?: Record<string, unknown>): void;
