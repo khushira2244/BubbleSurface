@@ -1,2 +1,5 @@
-import Link from "next/link";import styles from "@/components/landing/landing.module.css";
-export default function DemoPlaceholderPage(){return <main className={`${styles.page} ${styles.placeholderPage}`}><section className={styles.placeholderCard}><span className={styles.eyebrow}>Live scenario</span><h1>The BubbleSurface demo is next.</h1><p>This route is reserved for the interactive incident workflow. The landing page is complete; no simulated execution logic has been added here.</p><Link className={styles.secondaryButton} href="/">← Back to product overview</Link></section></main>}
+import { DemoStepOne } from "@/components/demo";
+
+export default function DemoStepOnePage() {
+  return <DemoStepOne />;
+}

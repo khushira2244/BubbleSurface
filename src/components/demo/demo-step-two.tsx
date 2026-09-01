@@ -1,0 +1,26 @@
+import React from "react";
+import Link from "next/link";
+import { Icon, type IconName } from "../landing/icons";
+import { DEMO_SCENARIO, GOLDEN_PATH } from "./demo-step-two.model";
+import styles from "./demo-step-two.module.css";
+
+export function DemoStepTwo(){return <main className={styles.page}>
+  <StepTwoHeader/><div className={styles.shell}>
+    <section className={styles.intro} aria-labelledby="scenario-title"><div><span className={styles.eyebrow}>Step 2 of 2 · {DEMO_SCENARIO.incidentId}</span><h1 id="scenario-title">Define the live security scenario<br/>we are going to prove</h1><p>The systems are already connected. Now we define the affected identity, human reviewer, external agent, and the capability transition BubbleSurface must enforce.</p></div><div className={styles.connections}><ConnectionPill provider="elastic" label="Elastic / SIEM connected"/><ConnectionPill provider="auth0" label="Auth0 connected"/></div></section>
+    <section className={styles.actors} aria-label="Scenario actors"><ActorCard icon="human" actor={DEMO_SCENARIO.affectedUser}/><ActorCard icon="human" actor={DEMO_SCENARIO.reviewer}/><ActorCard icon="agent" actor={DEMO_SCENARIO.agent}/></section>
+    <section className={styles.proofGrid}><TestConditionCard/><CapabilityTransition/></section>
+    <section className={styles.proves} aria-labelledby="proves-title"><div className={styles.provesTitle}><Icon name="shield" size={27}/><h2 id="proves-title">What this proves</h2></div><ProofPoint icon="human" title="Shared live state">Human and agent act against the same current security workflow.</ProofPoint><ProofPoint icon="lock" title="Human-gated authority">Sensitive capability appears only when policy, state and approval permit it.</ProofPoint><ProofPoint icon="surface" title="Dynamic WebMCP surface">Capabilities appear and disappear as the workflow progresses.</ProofPoint></section>
+    <nav className={styles.actions} aria-label="Demo setup navigation"><Link className={styles.backButton} href="/demo">← Back</Link><Link className={styles.primaryButton} href="/demo/live">Start Live Test <span>→</span></Link></nav>
+  </div></main>}
+
+function StepTwoHeader(){return <header className={styles.header}><div className={styles.headerInner}><Link href="/" className={styles.brand}><span>C</span><strong>BubbleSurface Demo</strong></Link><div className={styles.stepDots} aria-label="Demo setup step 2 of 2"><i/><i className={styles.current}/></div></div></header>}
+function ConnectionPill({provider,label}:{provider:"elastic"|"auth0";label:string}){return <div className={`${styles.connectionPill} ${styles[provider]}`}><b aria-hidden="true">{provider==="elastic"?"✣":"★"}</b><span>{label}</span><i aria-hidden="true"/></div>}
+
+type Actor = typeof DEMO_SCENARIO.affectedUser | typeof DEMO_SCENARIO.reviewer | typeof DEMO_SCENARIO.agent;
+export function ActorCard({icon,actor}:{icon:"human"|"agent";actor:Actor}){return <article className={`${styles.actorCard} ${styles[actor.accent]}`}><span className={styles.actorIcon}><Icon name={icon} size={27}/></span><div><p className={styles.actorLabel}>{actor.label}</p><h2>{actor.name}</h2><ul>{actor.facts.map(fact=><li key={fact}><Icon name="check" size={14}/>{fact}</li>)}</ul></div></article>}
+
+export function TestConditionCard(){return <article className={styles.condition}><h2><Icon name="verify" size={23}/> Test condition</h2><ul>{DEMO_SCENARIO.conditions.map(item=><li key={item}><span>✓</span>{item}</li>)}</ul><div className={styles.goal}><strong>Goal: contain the identity risk without exposing a broader action surface than necessary.</strong><p>BubbleSurface should expose investigation capabilities first, keep sensitive execution hidden until exact human approval, and move to verification after execution.</p></div></article>}
+
+export function CapabilityTransition(){return <article className={styles.transition}><h2><Icon name="surface" size={24}/> Capability transition we are testing</h2><div className={styles.transitionBody}><ol>{GOLDEN_PATH.map((step,index)=><li className={step.kind==="human"?styles.humanStep:""} key={step.name}><b>{index+1}</b><code>{step.name}</code>{index<GOLDEN_PATH.length-1?<span aria-hidden="true">↓</span>:null}</li>)}</ol><div className={styles.states}><State label="Before approval" tone="blue"><code>remove_approved_privilege</code> <strong>hidden</strong></State><State label="After exact human approval" tone="purple"><code>remove_approved_privilege</code> <strong>available</strong></State><State label="After execution" tone="blue"><code>remove_approved_privilege</code> removed<br/><code>verify_identity_state</code> <strong>available</strong></State></div></div><p className={styles.verificationNote}>The golden path highlights identity-state verification. The live backend requires both verification kinds to pass before final recovery.</p></article>}
+function State({label,tone,children}:{label:string;tone:"blue"|"purple";children:React.ReactNode}){return <div className={`${styles.state} ${styles[tone]}`}><span>{label}:</span><p>{children}</p></div>}
+function ProofPoint({icon,title,children}:{icon:IconName;title:string;children:string}){return <article className={styles.proofPoint}><Icon name={icon} size={28}/><div><h3>{title}</h3><p>{children}</p></div></article>}
