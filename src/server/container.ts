@@ -26,6 +26,7 @@ import { ActionExecutionService } from "./execution/action-execution.service";
 import { ActionVerificationService } from "./verification/action-verification.service";
 import { DemoIdentityVerificationSource } from "./verification/demo-identity-verification.source";
 import { createIdentityIntegration } from "./integrations/identity-integration.factory";
+import { CapabilityRegistry } from "./webmcp/capability-registry";
 
 seedSecurityData(db);
 const integrationConfig = getIntegrationConfig();
@@ -47,10 +48,12 @@ export const actionExecutionService = new ActionExecutionService(proposalReviewR
   securityContextService,lifecycleService,identityIntegration.executor);
 export const actionVerificationService = new ActionVerificationService(proposalReviewRepository,controlPlaneService,
   securityContextService,lifecycleService,identityIntegration.verification);
-export const webMcpTools = createWebMcpToolDefinitions({ securityContext: securityContextService, identityProvider,
+const demoWebMcpTools = createWebMcpToolDefinitions({ securityContext: securityContextService, identityProvider,
   eventSource: securityEventSource, evidenceValidator: evidenceReferenceValidator,
   executeApprovedAction:(input,actorId,expectedActionType)=>actionExecutionService.execute({...input,actorId,expectedActionType}),
   verifyApprovedAction:(input,actorId,kind)=>actionVerificationService.verify({...input,actorId,kind}) });
+export const capabilityRegistry = new CapabilityRegistry(Object.values(demoWebMcpTools));
+export const webMcpTools = capabilityRegistry.toRecord() as typeof demoWebMcpTools;
   
 export const webMcpAudit = new ControlPlaneWebMcpAuditRecorder(controlPlaneService);
 export const webMcpInvocationService = new ToolInvocationService(capabilityContextService, webMcpTools, webMcpAudit);

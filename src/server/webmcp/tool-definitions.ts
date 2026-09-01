@@ -30,6 +30,14 @@ export function createWebMcpToolDefinitions(dependencies: {
   const define = (name: WebMcpToolName, inputSchema: z.ZodType, outputSchema: z.ZodType,
     execute: WebMcpToolDefinition["execute"]): WebMcpToolDefinition => ({ name,
       description: TOOL_METADATA[name].description, classification: TOOL_METADATA[name].classification,
+      applicability: { subjectTypes: ["INCIDENT"], categories: ["IDENTITY_SESSION_COMPROMISE"] },
+      policyRequirements: { authoritativeVersion: true,
+        permissions: [TOOL_METADATA[name].classification === "READ" ? "INVESTIGATE"
+          : TOOL_METADATA[name].classification === "PREPARE" ? "PREPARE"
+          : TOOL_METADATA[name].classification === "EXECUTE" ? "EXECUTE" : "VERIFY"],
+        exactApproval: TOOL_METADATA[name].classification === "EXECUTE" || TOOL_METADATA[name].classification === "VERIFY" },
+      verification: TOOL_METADATA[name].classification === "EXECUTE"
+        ? { required: true, kinds: ["VERIFY_CONTAINMENT", "VERIFY_IDENTITY_STATE"] } : undefined,
       inputSchema, outputSchema, execute });
   return {
     inspect_incident: define("inspect_incident", baseInput, factsOutput, (raw) => {
