@@ -8,6 +8,8 @@ In the browser API targeted by this repository, a live page can register structu
 
 The repository does not vendor a WebMCP specification, pin a specification revision, or include an authoritative browser-support matrix. Claims here are therefore limited to the API shape implemented and tested by BubbleSurface.
 
+WebMCP is used instead of DOM automation because it gives the agent named, typed operations with explicit schemas. BubbleSurface can then govern those operations as capabilities rather than asking an agent to infer security actions from buttons and page text.
+
 ## 2. Page-level registration
 
 BubbleSurface targets the current document's model context:
@@ -123,6 +125,7 @@ The current repository does not include a real-browser WebMCP end-to-end test. I
 - The repository targets the `document.modelContext.registerTool` shape shown above.
 - No browser-version compatibility table is maintained in the repository.
 - No polyfill is provided when WebMCP is absent.
+- The WebMCP inspector used during the demo is a developer proof surface and is not part of the production human UI.
 - Interval refresh is fallback polling; there is no push subscription for external state changes.
 - Browser tests are adapter-level rather than real-agent end-to-end tests.
 
@@ -137,4 +140,4 @@ The current repository does not include a real-browser WebMCP end-to-end test. I
 - `docs/integration-architecture.md` — BubbleSurface integration boundary.
 - `docs/current-state-handoff.md` — full implementation inventory and known limitations.
 
-No official external WebMCP references were already recorded in the repository at the time these notes were written. Add authoritative specification and browser documentation links during final submission review rather than guessing them here.
+Official implementation and security guidance: [Chrome for Developers — WebMCP](https://developer.chrome.com/docs/web-platform/webmcp).

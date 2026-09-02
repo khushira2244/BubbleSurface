@@ -1,6 +1,20 @@
-# Integrating BubbleSurface into a cybersecurity application
+# Installing and integrating BubbleSurface
 
 BubbleSurface is not yet published as an npm package. This guide describes integration from the current repository source. Any package-style import shown outside this repository would be conceptual future packaging, not an available install command.
+
+## Run the reference application
+
+Prerequisites: Node.js 22, npm, and a browser. WebMCP discovery additionally requires a compatible browser/host or inspector. Docker is optional.
+
+```sh
+git clone https://github.com/khushira2244/BubbleSurface.git
+cd BubbleSurface/hi
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+The server creates `DATABASE_PATH`, initializes its SQLite schema, and idempotently seeds the reference fixture. Never commit `.env.local` or provider credentials.
 
 ## Architecture at a glance
 
@@ -181,7 +195,38 @@ Okta-shaped variables are parsed but no Okta adapter is implemented. Do not sele
 
 Keep all provider secrets server-side. Do not place them in capability schemas or browser bundles.
 
-## 12. Validation checklist
+## 12. Demo preparation
+
+```sh
+npm run prepare:demo:auth0
+npm run prepare:demo
+npm run preflight:demo
+```
+
+`prepare:demo:auth0` performs a real mutation against the configured dedicated demo Auth0 account. It strictly verifies the user ID and Asha demo email before assigning Finance Administrator. Do not run it against arbitrary production tenants. `prepare:demo` resets local control state; `preflight:demo` is read-only.
+
+## 13. Docker
+
+The production Dockerfile is `hi/Dockerfile`. From `hi`:
+
+```sh
+docker build -t bubblesurface .
+docker run --rm -p 8080:8080 --env-file .env.local -e PORT=8080 bubblesurface
+```
+
+The image uses a multi-stage Node 22 build, `npm ci`, `npm run build`, a non-root runtime user, and `next start` bound to `0.0.0.0`. Secrets remain runtime environment variables. The image creates writable `/app/data`; mount a development volume and set `DATABASE_PATH` if local state must survive container recreation.
+
+## 14. Google Cloud Run
+
+The public hackathon service is `bubblesurface` in `asia-south1`:
+
+<https://bubblesurface-236264514374.asia-south1.run.app>
+
+From the repository root, select `hi/Dockerfile` and use `hi` as the build context. Cloud Run supplies `PORT=8080`; configure Auth0, Elastic, and OpenAI values as runtime environment variables or managed secrets.
+
+SQLite on Cloud Run is ephemeral and instance-local. Keep maximum instances at one for a coherent hackathon demo. Durable production deployments require external persistence and multi-instance concurrency design.
+
+## 15. Validation checklist
 
 - Discovery returns only currently allowed descriptors.
 - Invoking with an old authoritative version fails.

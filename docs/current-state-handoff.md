@@ -1,5 +1,7 @@
 # BubbleSurface current-state handoff
 
+> Historical architecture reconstruction: this document records the repository state at the original takeover milestone. Product status, deployment links, test totals, and completed demo UI work have advanced since then. Use the repository [README](../README.md) and the current documents in this directory for public setup and operation guidance.
+
 Reconstructed from the repository on 2026-09-01 and updated after the first reusable-integration extraction on the same date. This document describes implemented code, not the aspirations in `direction.md`.
 
 ## Executive summary

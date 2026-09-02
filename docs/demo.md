@@ -1,166 +1,91 @@
 # BubbleSurface demo runbook
 
-## Current readiness note
+This runbook exercises the public golden path on one `/demo/live` page. The host page shows persistent incident state, `BubbleSurfacePanel` handles the human decision, optional toasts announce important events, and the WebMCP inspector proves the machine-visible capability surface.
 
-`/demo/live` mounts `BubbleSurfaceWeb` and the reusable human surface. Before recording, run `npm run prepare:demo` followed by the read-only `npm run preflight:demo`; do not proceed unless preflight prints `READY: true`.
+## Scenario
 
-The recorded Elastic path requires `SECURITY_EVENT_SOURCE=elastic`, configured `ELASTIC_ENDPOINT` and `ELASTIC_API_KEY`, and the seeded `bubblesurface-security-events` index (`npm run seed:elastic`). Auth0 preparation is intentionally separate: `npm run prepare:demo:auth0` targets only `AUTH0_ASHA_USER_ID`, refuses to mutate unless that user has the exact Asha fixture email, and idempotently assigns `Finance Administrator`. Preflight never prints provider secrets.
+| Item | Demo value |
+| --- | --- |
+| Incident | `INC-1001` |
+| Affected user | Asha Mehta |
+| Identity | `IDN-ASHA` |
+| Reviewer | Kavya / `analyst-kavya` |
+| Suspicious session | `SES-ASHA-SUSPICIOUS` |
+| Sensitive privilege | `PRV-ASHA-FINADMIN` |
+| Auth0 role | Finance Administrator |
 
-## Reference scenario
+Elastic supplies the event timeline when configured. Auth0 supplies current privilege state, receives the real role-removal mutation, and is queried again during verification. SQLite holds the reference lifecycle and control records.
 
-- Subject: `INC-1001`
-- Supported workflow: `IDENTITY_SESSION_COMPROMISE`
-- Evidence source: Elastic when `SECURITY_EVENT_SOURCE=elastic`; otherwise SQLite.
-- Identity/action source: Auth0 when `IDENTITY_PROVIDER=auth0`; otherwise demo SQLite behavior.
-- WebMCP discovery: `GET /api/webmcp/capabilities/INC-1001`
-- WebMCP invocation: `POST /api/webmcp/invoke/:toolName`
+## Prepare a local demo
 
-Every tool payload includes the current `subjectId` and `expectedLifecycleVersion`. Execute and verify tools additionally require `actionId`, `proposalVersion`, and a unique `idempotencyKey` of 8–200 characters.
+Configure `.env.local` from `.env.example`, then run:
 
-## Group 1 — Initial capability discovery
-
-**Goal:** Prove that the page exposes investigation capabilities but not consequential execution.
-
-**Page state:** After `npm run prepare:demo`, `INC-1001` is restored to its seeded `INVESTIGATING` state at version 3. Read the current incident before relying on an expected version.
-
-**Expected WebMCP capabilities:**
-
-- `inspect_incident`
-- `get_active_sessions`
-- `get_device_context`
-- `check_privilege_changes`
-- `review_evidence_timeline`
-
-`prepare_containment`, both execution tools, and both verification tools are not yet allowed.
-
-**Relevant request:** `GET /api/webmcp/capabilities/INC-1001`.
-
-**Site Tools / WebMCP:** The five read tools should be discoverable when the future demo page mounts `BubbleSurfaceWeb`. Sensitive tools should be absent, not merely disabled in visual UI.
-
-**DevTools Network:** One capability snapshot request returning `context.lifecycleVersion` and the five tool descriptors.
-
-**Resulting state:** No mutation. Lifecycle remains `INVESTIGATING`.
-
-## Group 2 — Investigation
-
-**Goal:** Show the external agent collecting bounded evidence through structured tools.
-
-**Page state:** `INVESTIGATING`, with Elastic supplying the evidence timeline when configured.
-
-**Expected WebMCP capabilities:** The same five read capabilities.
-
-**Relevant calls:**
-
-- `inspect_incident`
-- `get_active_sessions`
-- `get_device_context` with a related `deviceId`
-- `check_privilege_changes`
-- `review_evidence_timeline`
-
-Calls go to `POST /api/webmcp/invoke/:toolName`. Use related identifiers returned by the incident/context tools; unrelated device targets are rejected.
-
-**Site Tools / WebMCP:** Read capabilities remain present during investigation.
-
-**DevTools Network:** Invocation POSTs followed by capability refresh GETs. The refresh after invocation is performed by `BubbleSurfaceWeb`.
-
-**Resulting state:** Evidence has been read; the tools themselves do not advance lifecycle state.
-
-## Group 3 — Prepare consequential action
-
-**Goal:** Produce a bounded action proposal tied to current evidence without executing it.
-
-**Page state:** Advance the incident from `INVESTIGATING` to `VALIDATED` using `POST /api/incidents/INC-1001/commands/validate` with the current `expectedVersion` and demo `actorId`. At `VALIDATED`, `prepare_containment` becomes available.
-
-**Expected WebMCP capabilities:** Five reads plus `prepare_containment`. Execution and verification remain absent.
-
-**Relevant calls:**
-
-- `prepare_containment` with `requestedActions` (`REVOKE_SESSIONS` and/or `REMOVE_PRIVILEGE`) and valid `evidenceRefs`. This capability returns a validated `DRAFT`; it does not persist a proposal.
-- `POST /api/incidents/INC-1001/reason` is the current route that runs configured reasoning and persists AI-created proposal records. It requires `OPENAI_API_KEY`; an optional `expectedVersion` may be supplied.
-- To make a proposal human-reviewable, use the real lifecycle routes in order: `POST /api/incidents/INC-1001/commands/prepare-response`, then `POST /api/incidents/INC-1001/commands/request-approval`, each with the current version.
-
-**Site Tools / WebMCP:** `prepare_containment` appears only at `VALIDATED`. After leaving that state it disappears during reconciliation.
-
-**DevTools Network:** The lifecycle command, preparation invocation, reasoning request if used, subsequent lifecycle commands, and capability refreshes should be visible separately.
-
-**Resulting state:** An exact persisted proposal is available and the incident reaches `AWAITING_APPROVAL`. No provider action has occurred.
-
-## Group 4 — Human approval
-
-**Goal:** Show that a human decision changes agent-visible authority.
-
-**Page state:** `AWAITING_APPROVAL`; the reusable panel displays the latest exact proposal version.
-
-**Expected WebMCP capabilities before approval:** Read tools; no execution capability.
-
-**Relevant call:** `POST /api/actions/:actionId/approve` with:
-
-```json
-{
-  "proposalVersion": 1,
-  "expectedLifecycleVersion": 6,
-  "comment": "Reviewed against current evidence."
-}
+```sh
+npm run prepare:demo:auth0
+npm run prepare:demo
+npm run preflight:demo
 ```
 
-The numbers above are illustrative only: use the actual proposal and lifecycle versions returned in this run. The server ignores a submitted demo `actorId` for authority and resolves the labeled demo review principal.
+- `prepare:demo:auth0` validates the configured Auth0 user ID and exact demo email before idempotently assigning Finance Administrator.
+- `prepare:demo` resets `INC-1001`, its fixture, proposals, approvals, executions, verifications, audit records, and lifecycle.
+- `preflight:demo` performs read-only readiness checks. Continue only when it prints `READY: true`.
 
-Reject uses `/reject`. Modify uses `/modify`, supersedes the current version, and requires fresh approval.
+Never use the Auth0 preparation script against an arbitrary or production identity. It is intentionally restricted to the dedicated Asha demo account.
 
-**Site Tools / WebMCP:** With `RefreshingApprovalClient`, successful approval immediately refreshes the capability snapshot. The execution tool matching the exact approved action appears: `revoke_approved_sessions`, `remove_approved_privilege`, or both for a matching `CONTAIN_IDENTITY` proposal.
+## Public demo
 
-**DevTools Network:** Approval POST followed by `GET /api/webmcp/capabilities/INC-1001`.
+- Application: <https://bubblesurface-236264514374.asia-south1.run.app>
+- Live workspace: <https://bubblesurface-236264514374.asia-south1.run.app/demo/live>
+- Demo video: **Coming shortly**
 
-**Resulting state:** Approval advances the incident to `CONTAINING`. The proposal is approved; it has not executed.
+Cloud Run's SQLite database is instance-local and ephemeral. Keep maximum instances at one for the hackathon demo and prepare/reset the intended instance before recording.
 
-## Group 5 — Execute approved action
+## Golden-path rehearsal
 
-**Goal:** Invoke only the capability authorized by the exact approved proposal and change provider state.
+All WebMCP inputs use the current `subjectId` and `expectedLifecycleVersion`. Execute and verify calls also use the returned `actionId`, exact `proposalVersion`, and a new 8–200 character `idempotencyKey`.
 
-**Page state:** `CONTAINING`, current lifecycle version, latest approved proposal not previously succeeded.
+### 1. Start at investigation
 
-**Expected WebMCP capability:** The action-matching execution tool.
+Open `/demo/live`. Confirm lifecycle `INVESTIGATING` at demo version 3, Investigate is current, Finance Administrator is `ACTIVE`, and the browser exposes `inspect_incident`, `get_active_sessions`, `get_device_context`, `check_privilege_changes`, and `review_evidence_timeline`.
 
-**Relevant call:** `revoke_approved_sessions` or `remove_approved_privilege` with the exact `actionId`, `proposalVersion`, current `expectedLifecycleVersion`, and a fresh `idempotencyKey`.
+### 2. Complete the evidence boundary
 
-**Site Tools / WebMCP:** The execution capability is present before the call. After successful execution and refresh, it disappears.
+Invoke `review_evidence_timeline` with current version 3. Evidence is returned, lifecycle becomes `VALIDATED` version 4, `prepare_containment` appears, the host page moves to Review, and the investigation toast appears once.
 
-**DevTools Network:** Invocation POST, provider request on the server (not exposed as a browser credential-bearing request), then capability refresh GET. Auth0 is the external action target when configured for the supported privilege-removal mapping; session revocation remains the demo executor in the current hybrid integration.
+### 3. Prepare containment
 
-**Resulting state:** A successful execution record is persisted and lifecycle advances to `CONTAINED`. Repeating the same compatible idempotency key returns the prior record; conflicting reuse is rejected. A second successful execution is blocked.
+Invoke `prepare_containment` using current version 4 and the evidence-backed `REMOVE_PRIVILEGE` action. A typed proposal is persisted for `PRV-ASHA-FINADMIN`; lifecycle reaches `AWAITING_APPROVAL` version 6; execution remains unavailable; and `BubbleSurfacePanel` opens for review.
 
-## Group 6 — Verify authoritative result
+### 4. Approve the exact proposal
 
-**Goal:** Confirm the provider-observed result rather than assuming an execution response is sufficient.
+In `BubbleSurfacePanel`, review and approve the exact action/version. The server resolves `analyst-kavya`; the browser does not supply review authority. Lifecycle becomes `CONTAINING` version 7, `remove_approved_privilege` appears, and Execute becomes current.
 
-**Page state:** `CONTAINED` initially, then `VERIFYING` after the first verification begins.
+Reject and Modify remain valid alternatives. Reject prevents execution. Modify supersedes the displayed proposal and requires approval of the new exact version.
 
-**Expected WebMCP capabilities:**
+### 5. Execute against Auth0
 
-- `verify_containment`
-- `verify_identity_state`
+Invoke `remove_approved_privilege` with version 7, the approved action/version, and a fresh idempotency key. The dedicated Auth0 user's Finance Administrator role is removed, execution is persisted, lifecycle becomes `CONTAINED` version 8, execution disappears, verification tools appear, and the provider-backed identity card changes to `REVOKED`.
 
-Execution tools remain absent.
+### 6. Verify identity state
 
-**Relevant calls:** Both verification tools use the exact action/proposal, current lifecycle version, and independent idempotency keys.
+Invoke `verify_identity_state` with version 8 and a new idempotency key. Auth0 is read again. Lifecycle becomes `VERIFYING` version 9; identity verification reads `PASSED`; containment verification remains `PENDING`; and the incident is not recovered.
 
-**Site Tools / WebMCP:** Verification capabilities appear after execution. After both verification kinds pass and lifecycle reaches `RECOVERED`, the current policy removes them.
+### 7. Verify containment
 
-**DevTools Network:** Verification invocation POSTs and capability refresh GETs. Provider observation occurs server-side. With Auth0, privilege state is freshly observed there; other demo identity facts may still come from SQLite because the reference integration is intentionally hybrid.
+Invoke `verify_containment` with version 9 and a new idempotency key. Both required verification kinds are now persisted as passed, lifecycle becomes `RECOVERED` version 10, sensitive execution/verification capabilities disappear, and the workspace shows the final recovered outcome.
 
-**Resulting state:** Each verification result is persisted with expected and observed state. When both verification kinds pass for the exact proposal version, lifecycle advances to `RECOVERED`.
+The version numbers above are deterministic demo and concurrency details, not user-facing workflow concepts.
 
-## Before recording
+## Recording checklist
 
-- [ ] Run `npm run prepare:demo` and confirm `INVESTIGATING` version 3.
-- [ ] Run `npm run preflight:demo` and require `READY: true`.
-- [ ] Configure and validate `OPENAI_API_KEY` if the recorded flow uses `/reason` to create proposals.
-- [ ] Set `SECURITY_EVENT_SOURCE=elastic` plus `ELASTIC_ENDPOINT`/`ELASTIC_API_KEY` and run `npm run seed:elastic` if Elastic must be shown.
-- [ ] Set `IDENTITY_PROVIDER=auth0` and all required Auth0 variables if the supported external privilege action must be shown.
-- [ ] Confirm the proposal selected by reasoning uses an action/target supported by the configured provider path.
-- [ ] Confirm the browser actually exposes `document.modelContext.registerTool` and Site Tools sees the page registrations.
-- [ ] Open DevTools Network and preserve logs.
-- [ ] Use returned versions; do not hard-code the illustrative version in this runbook.
-- [ ] Prepare unique idempotency keys for execution and each verification.
-- [ ] Rehearse the exact capability appearances/disappearances once before recording.
-- [ ] Do not expose provider credentials, authorization headers, `.env` files, or personal browser data in the recording.
+- Stay on `/demo/live`; do not reload or navigate between stages.
+- Use the normal workspace for the human story and the inspector only for capability proof.
+- Use `BubbleSurfacePanel` for the exact approval.
+- Show Finance Administrator changing from active to revoked.
+- Pause after the first verification to prove partial verification is not recovery.
+- Finish on the recovered header and persistent containment outcome.
+- Confirm polling does not duplicate toasts.
+
+## Safe negative demonstrations
+
+A stale lifecycle version, wrong proposal version, execution before approval, incompatible reuse of an idempotency key, or invocation of a retained stale callback should produce a structured server denial without broadening browser capabilities.

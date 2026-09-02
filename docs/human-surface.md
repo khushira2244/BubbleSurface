@@ -136,24 +136,25 @@ The host application owns placement, subject selection, authenticated principal 
 
 ## I. Standalone and demo reuse
 
-`mode="standalone"` uses the same components with a slightly wider card and restrained elevation. A later hackathon demo page can compose:
+`mode="standalone"` uses the same components with a slightly wider card and restrained elevation. The completed hackathon demo composes:
 
 - its scenario-specific incident/evidence workspace;
 - `BubbleSurfaceWeb` for the current subject;
 - one generic `BubbleSurfacePanel` for human intervention;
-- demo-specific adapters that supply labels and activity without putting those assumptions into the component library.
+- demo-specific adapters that supply labels and activity without putting those assumptions into the component library;
+- a living host workspace whose Investigate, Review, Execute, Verify, and Recovered presentation comes from authoritative state.
 
-No scenario shell or demo data was added in this task.
+The host workspace, panel, notifications, and inspector have separate roles. The host page communicates persistent state and outcomes. `BubbleSurfacePanel` is the only human decision surface. Notifications provide optional transient awareness. The WebMCP inspector is developer/demo proof, not production human UI.
 
-## J. Remaining work for the hackathon demo page
+## J. Current demo composition
 
-The demo page should next provide:
+The `/demo/live` page currently provides:
 
-1. scenario-specific subject and evidence context;
-2. a current action/proposal selection strategy;
+1. scenario-specific incident and evidence context;
+2. latest proposal, execution, and verification loading;
 3. composition of `BubbleSurfaceWeb`, `RefreshingApprovalClient`, `HttpHumanSurfaceClient`, and `BubbleSurfacePanel`;
-4. authoritative activity loading, including WebMCP audit events if the demo wants a richer trace;
-5. clear labeling that fixed demo principals are unauthenticated;
-6. polished page layout around the reusable panel, without changing connector or human-surface contracts.
+4. authoritative activity polling and deduplicated notifications;
+5. provider-backed current identity and privilege state;
+6. lifecycle-derived progress and containment outcomes without route transitions or fake frontend state.
 
-The current backend lacks a generic combined activity-feed endpoint. That is not a blocker: the demo can initially adapt existing proposal/execution/verification records, and add a thin audit read endpoint only if the final trace needs events that those records cannot represent.
+The demo uses its incident activity endpoint for a focused trace. Integrating applications may provide their own combined activity model without changing the panel contract.

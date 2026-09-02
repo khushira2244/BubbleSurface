@@ -6,6 +6,24 @@ BubbleSurface is a reusable WebMCP capability/control layer for cybersecurity ap
 
 The current security-operations demo is the first consumer. Its ten existing tool names, lifecycle, reasoning, exact-version approval, execution, verification, audit, and idempotency behavior remain intact. Auth0, Elastic, the seeded identities, and `INC-1001` are demo composition details, not reusable-core dependencies.
 
+```mermaid
+flowchart LR
+    Agent[External AI Agent] --> Web[BubbleSurfaceWeb]
+    Web --> Registry[BrowserCapabilityReconciler]
+    Web --> HTTP[Capability HTTP Boundary]
+    HTTP --> Enforcement[Capability Enforcement]
+    Enforcement --> Principal[PrincipalResolver]
+    Enforcement --> State[AuthoritativeStateProvider]
+    Enforcement --> Policy[CapabilityPolicy]
+    Enforcement --> Sensitive[Sensitive Invocation Authorizer]
+    Human[Security Analyst] --> Panel[BubbleSurfacePanel]
+    Panel --> Approval[ApprovalClient / Server Approval]
+    Approval --> State
+    Policy --> Handlers[Application Capability Handlers]
+    Handlers --> Providers[Elastic / Auth0 / Other Adapters]
+    State --> Web
+```
+
 ## A. What another cybersecurity application owns
 
 An integrating application owns:
@@ -40,7 +58,7 @@ BubbleSurface owns:
 - a framework-neutral HTTP-shaped adapter over principal resolution, discovery, and invocation;
 - authoritative-version enforcement and invocation-schema/output validation;
 - a sensitive-invocation authorizer boundary;
-- an approval service contract that can back either a future BubbleSurface UI or the application's UI.
+- approval contracts that back the current optional `BubbleSurfacePanel` or an application's existing UI.
 
 The concrete demo enforcement remains stricter than the generic minimum: it reloads SQLite context and checks lifecycle, permissions, action type, latest proposal version, exact approval, execution state, applicability, and replay/idempotency before performing work.
 
@@ -222,7 +240,7 @@ The sensitive authorizer must independently reload the proposal/action and verif
 - `ToolInvocationService`, `ActionExecutionService`, and `ActionVerificationService` remain the demo's strict enforcement/authorization/idempotency specialization.
 - Demo routes resolve explicit unauthenticated demo principals server-side and ignore submitted actor identity for authorization.
 - SQLite, Elastic, and Auth0 adapters are selected only in demo composition.
-- `WebMcpBootstrap` uses `BubbleSurfaceWeb` and `HttpCapabilitySnapshotTransport` instead of directly registering tools.
+- the `/demo/live` bootstrap uses `BubbleSurfaceWeb` and `HttpCapabilitySnapshotTransport` instead of directly registering tools.
 - Both `CapabilityRefreshService` and `BubbleSurfaceWeb` now use the same `BrowserCapabilityReconciler` path.
 
 ## Target integration journey
@@ -238,7 +256,7 @@ The sensitive authorizer must independently reload the proposal/action and verif
 
 ## Deliberate remaining demo coupling
 
-This extraction does not replace the demo lifecycle or data model, remove closed-name validation from demo routes, add authentication, redesign persistence, implement jobs/outbox, or build the human frontend. The demo page still initially selects `INC-1001`, while reusable `setSubject` supports safe context changes.
+The reusable extraction does not replace the demo lifecycle or data model, remove closed-name validation from demo routes, add production authentication, redesign persistence, or implement jobs/outbox. The completed demo page selects `INC-1001`, while reusable `setSubject` supports safe context changes for other host applications.
 
 ## Final connector path
 

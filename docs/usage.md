@@ -2,6 +2,29 @@
 
 Examples below use current repository APIs and `@/` path aliases from `tsconfig.json`. BubbleSurface is not yet an external npm package.
 
+## Use the reference workflow
+
+The host and agent share one authoritative incident workflow:
+
+```text
+INVESTIGATING -> VALIDATED -> AWAITING_APPROVAL -> CONTAINING
+-> CONTAINED -> VERIFYING -> RECOVERED
+```
+
+The human stays on `/demo/live`. That page renders persistent state and outcomes; `BubbleSurfacePanel` is the only decision surface; optional toasts provide transient awareness. The external agent discovers and invokes WebMCP capabilities from the page. It is not embedded in the panel.
+
+Capability progression:
+
+| Stage | Available operations |
+| --- | --- |
+| Investigate | `inspect_incident`, `get_active_sessions`, `get_device_context`, `check_privilege_changes`, `review_evidence_timeline` |
+| Prepare | the five reads plus `prepare_containment` |
+| Execute | the action-matching `revoke_approved_sessions` or `remove_approved_privilege` after exact approval |
+| Verify | `verify_identity_state` and `verify_containment` after successful execution |
+| Recovered | no sensitive execution or verification capability remains |
+
+The ten descriptors exist in the application registry, but policy never exposes all ten simultaneously. Always use the lifecycle version returned by the latest capability snapshot. Use a new idempotency key for each distinct execute or verify operation.
+
 ## Initialize `BubbleSurfaceWeb`
 
 ```ts
