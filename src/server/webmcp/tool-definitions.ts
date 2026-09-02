@@ -14,8 +14,8 @@ const actionInput = baseInput.extend({ actionId: z.string().min(1), proposalVers
   idempotencyKey: z.string().min(8).max(200) }).strict();
 const factsOutput = z.object({ kind: z.string(), facts: z.unknown() });
 const boundaryOutput = z.object({ status: z.literal("NOT_EXECUTED"), boundary: z.string(), message: z.string() });
-const draftOutput = z.object({ status: z.literal("DRAFT"), subjectId: z.string(), lifecycleVersion: z.number().int().positive(),
-  requestedActions: z.array(z.string()), evidenceRefs: z.array(z.string()) });
+const draftOutput = z.object({ status: z.literal("REVIEW_REQUIRED"), subjectId: z.string(), state:z.literal("AWAITING_APPROVAL"), lifecycleVersion: z.number().int().positive(),
+  proposals:z.array(z.object({actionId:z.string(),proposalVersion:z.number().int().positive(),actionType:z.string(),target:z.record(z.string(),z.unknown()),reviewRequired:z.literal(true)})) });
 
 export class ToolTargetNotRelatedError extends Error {
   readonly code = "TOOL_TARGET_NOT_RELATED";
@@ -24,6 +24,8 @@ export class ToolTargetNotRelatedError extends Error {
 export function createWebMcpToolDefinitions(dependencies: {
   securityContext: SecurityContextService; identityProvider: IdentityProvider; eventSource: SecurityEventSource;
   evidenceValidator: EvidenceReferenceValidator;
+  completeInvestigation?: (subjectId:string,expectedLifecycleVersion:number,actorId:string)=>unknown;
+  prepareContainment?: (input:z.infer<typeof prepareInput>,actorId:string)=>unknown;
   executeApprovedAction?: (input: {subjectId:string;expectedLifecycleVersion:number;actionId:string;proposalVersion:number;idempotencyKey:string}, actorId:string, actionType:"REVOKE_SESSIONS"|"REMOVE_PRIVILEGE") => Promise<unknown>;
   verifyApprovedAction?: (input: {subjectId:string;expectedLifecycleVersion:number;actionId:string;proposalVersion:number;idempotencyKey:string}, actorId:string, kind:"VERIFY_CONTAINMENT"|"VERIFY_IDENTITY_STATE") => Promise<unknown> | unknown;
 }): Record<WebMcpToolName, WebMcpToolDefinition> {
@@ -60,15 +62,17 @@ export function createWebMcpToolDefinitions(dependencies: {
         privilegeEvents: context.events.filter((event) => event.eventType.includes("PRIVILEGE")),
       } };
     }),
-    review_evidence_timeline: define("review_evidence_timeline", baseInput, factsOutput, async (raw) => {
+    review_evidence_timeline: define("review_evidence_timeline", baseInput, factsOutput, async (raw,context) => {
       const input = baseInput.parse(raw);
-      return { kind: "evidence_timeline", facts: await dependencies.eventSource.getEvidenceTimeline("INCIDENT", input.subjectId) };
+      const facts=await dependencies.eventSource.getEvidenceTimeline("INCIDENT", input.subjectId);
+      dependencies.completeInvestigation?.(input.subjectId,input.expectedLifecycleVersion,context.actorId);
+      return { kind: "evidence_timeline", facts };
     }),
-    prepare_containment: define("prepare_containment", prepareInput, draftOutput, (raw) => {
+    prepare_containment: define("prepare_containment", prepareInput, draftOutput, (raw,context) => {
       const input = prepareInput.parse(raw);
       dependencies.evidenceValidator.validate("INCIDENT", input.subjectId, input.evidenceRefs);
-      return { status: "DRAFT", subjectId: input.subjectId, lifecycleVersion: input.expectedLifecycleVersion,
-        requestedActions: input.requestedActions, evidenceRefs: input.evidenceRefs };
+      if(!dependencies.prepareContainment) throw new Error("Containment preparation is not configured.");
+      return dependencies.prepareContainment(input,context.actorId);
     }),
     revoke_approved_sessions: define("revoke_approved_sessions", actionInput, z.unknown(), async (raw,context) => dependencies.executeApprovedAction
       ? dependencies.executeApprovedAction(actionInput.parse(raw),context.actorId,"REVOKE_SESSIONS") : ({status:"NOT_EXECUTED"})),

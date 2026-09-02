@@ -27,6 +27,7 @@ import { ActionVerificationService } from "./verification/action-verification.se
 import { DemoIdentityVerificationSource } from "./verification/demo-identity-verification.source";
 import { createIdentityIntegration } from "./integrations/identity-integration.factory";
 import { CapabilityRegistry } from "./webmcp/capability-registry";
+import { ContainmentPreparationService, InvestigationCompletionService } from "./webmcp/containment-preparation.service";
 
 seedSecurityData(db);
 const integrationConfig = getIntegrationConfig();
@@ -44,12 +45,16 @@ export const identityProvider = identityIntegration.provider;
 export const securityEventSource = createSecurityEventSource(db, integrationConfig);
 export const capabilityContextService = new CapabilityContextService(new SqliteCapabilityContextRepository(db));
 const proposalReviewRepository = new SqliteProposalReviewRepository(db);
+export const investigationCompletionService=new InvestigationCompletionService(securityContextService,lifecycleService,controlPlaneService);
+export const containmentPreparationService=new ContainmentPreparationService(securityContextService,lifecycleService,controlPlaneService);
 export const actionExecutionService = new ActionExecutionService(proposalReviewRepository,controlPlaneService,
   securityContextService,lifecycleService,identityIntegration.executor);
 export const actionVerificationService = new ActionVerificationService(proposalReviewRepository,controlPlaneService,
   securityContextService,lifecycleService,identityIntegration.verification);
 const demoWebMcpTools = createWebMcpToolDefinitions({ securityContext: securityContextService, identityProvider,
   eventSource: securityEventSource, evidenceValidator: evidenceReferenceValidator,
+  completeInvestigation:(subjectId,version,actorId)=>investigationCompletionService.complete(subjectId,version,actorId),
+  prepareContainment:(input,actorId)=>containmentPreparationService.prepare(input,actorId),
   executeApprovedAction:(input,actorId,expectedActionType)=>actionExecutionService.execute({...input,actorId,expectedActionType}),
   verifyApprovedAction:(input,actorId,kind)=>actionVerificationService.verify({...input,actorId,kind}) });
 export const capabilityRegistry = new CapabilityRegistry(Object.values(demoWebMcpTools));

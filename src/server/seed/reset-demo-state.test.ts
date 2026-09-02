@@ -11,6 +11,7 @@ describe("demo reset",()=>{
 
   it("replays INC-1001 deterministically without touching unrelated subjects",()=>{
     db.prepare("UPDATE security_cases SET state='RECOVERED',version=10 WHERE id='INC-1001'").run();
+    db.prepare("UPDATE identities SET email='stale-asha@example.com' WHERE id='IDN-ASHA'").run();
     db.prepare("UPDATE sessions SET status='REVOKED' WHERE id='SES-ASHA-SUSPICIOUS'").run();
     db.prepare("UPDATE privileges SET status='REVOKED',revoked_at='2026-08-29T00:00:00.000Z' WHERE id='PRV-ASHA-FINADMIN'").run();
     db.prepare("INSERT INTO action_proposals(id,subject_type,subject_id,action_type,parameters_json,status,proposed_by,created_at,updated_at) VALUES('ACT-RESET','INCIDENT','INC-1001','REMOVE_PRIVILEGE','{}','PROPOSED','AI','2026-08-29T00:00:00.000Z','2026-08-29T00:00:00.000Z')").run();
@@ -19,6 +20,7 @@ describe("demo reset",()=>{
     const first=resetDemoState(db),second=resetDemoState(db);
     expect(first).toEqual({subjectId:"INC-1001",lifecycleState:"INVESTIGATING",lifecycleVersion:3,proposals:0,approvals:0,executions:0,verifications:0});expect(second).toEqual(first);
     expect(db.prepare("SELECT status FROM sessions WHERE id='SES-ASHA-SUSPICIOUS'").get()).toEqual({status:"ACTIVE"});
+    expect(db.prepare("SELECT email FROM identities WHERE id='IDN-ASHA'").get()).toEqual({email:"asha.bubblesurface@example.com"});
     expect(db.prepare("SELECT status,revoked_at FROM privileges WHERE id='PRV-ASHA-FINADMIN'").get()).toEqual({status:"ACTIVE",revoked_at:null});
     expect(db.prepare("SELECT state,version FROM security_cases WHERE id='FIND-2001'").get()).toEqual({state:"INVESTIGATING",version:3});
   });

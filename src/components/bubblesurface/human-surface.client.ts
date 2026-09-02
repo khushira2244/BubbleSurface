@@ -33,6 +33,14 @@ export class HttpHumanSurfaceClient implements ApprovalClient {
       executions: ((execution as { executions?: Record<string, unknown>[] }).executions ?? []),
       verifications: ((verification as { verifications?: Record<string, unknown>[] }).verifications ?? []) });
   }
+  async loadLatestModel(subject: HumanSurfaceSubject): Promise<HumanSurfaceModel | null> {
+    const listed=await this.list(subject.id) as {actions?:Array<Record<string,unknown>>};
+    const actions=listed.actions??[];
+    if(!actions.length)return null;
+    const latest=actions.at(-1)!;
+    const actionId=String(latest.actionId??"");
+    return actionId?this.loadModel(subject,actionId):null;
+  }
   private async get(path: string) { return responseJson(await fetch(`${this.baseUrl}${path}`, { cache: "no-store" })); }
   private async mutate(actionId: string, kind: string, input: object) {
     return responseJson(await fetch(`${this.baseUrl}/api/actions/${encodeURIComponent(actionId)}/${kind}`, {

@@ -15,7 +15,7 @@ export const securityFixture: SecurityFixture = {
     { id: "INC-1003", type: "INCIDENT", title: "High-risk unmanaged device activity", state: "TRIAGE", version: 2, ...caseT },
   ],
   identities: [
-    { id: "IDN-ASHA", displayName: "Asha Mehta", email: "asha.mehta@northstar.example", department: "Finance Operations", normalLocation: "Bengaluru, IN", riskLevel: "HIGH", source: "simulated-iam", createdAt: t.created, updatedAt: t.updated },
+    { id: "IDN-ASHA", displayName: "Asha Mehta", email: "asha.bubblesurface@example.com", department: "Finance Operations", normalLocation: "Bengaluru, IN", riskLevel: "HIGH", source: "simulated-iam", createdAt: t.created, updatedAt: t.updated },
     { id: "IDN-ROHAN", displayName: "Rohan Rao", email: "rohan.rao@northstar.example", department: "Engineering", normalLocation: "Hyderabad, IN", riskLevel: "MEDIUM", source: "simulated-iam", createdAt: t.created, updatedAt: t.updated },
     { id: "IDN-MIRA", displayName: "Mira Shah", email: "mira.shah@northstar.example", department: "Sales", normalLocation: "Mumbai, IN", riskLevel: "MEDIUM", source: "simulated-iam", createdAt: t.created, updatedAt: t.updated },
   ],

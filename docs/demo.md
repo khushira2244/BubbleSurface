@@ -2,9 +2,9 @@
 
 ## Current readiness note
 
-The backend scenario, WebMCP integration controller, Elastic/Auth0 adapters, and reusable human surface exist. The current `/demo` route is intentionally only a placeholder, and the landing page does not mount `WebMcpBootstrap`. Therefore this runbook describes the repository-supported proof sequence, but the complete browser recording cannot yet be performed from `/demo` until the next task composes the real demo page with `BubbleSurfaceWeb` and `BubbleSurfacePanel`.
+`/demo/live` mounts `BubbleSurfaceWeb` and the reusable human surface. Before recording, run `npm run prepare:demo` followed by the read-only `npm run preflight:demo`; do not proceed unless preflight prints `READY: true`.
 
-Do not imply in a submission video that the current placeholder is an interactive demo.
+The recorded Elastic path requires `SECURITY_EVENT_SOURCE=elastic`, configured `ELASTIC_ENDPOINT` and `ELASTIC_API_KEY`, and the seeded `bubblesurface-security-events` index (`npm run seed:elastic`). Auth0 preparation is intentionally separate: `npm run prepare:demo:auth0` targets only `AUTH0_ASHA_USER_ID`, refuses to mutate unless that user has the exact Asha fixture email, and idempotently assigns `Finance Administrator`. Preflight never prints provider secrets.
 
 ## Reference scenario
 
@@ -21,7 +21,7 @@ Every tool payload includes the current `subjectId` and `expectedLifecycleVersio
 
 **Goal:** Prove that the page exposes investigation capabilities but not consequential execution.
 
-**Page state:** After `npm run reset:demo`, `INC-1001` is restored to its seeded `INVESTIGATING` state. Read the current incident before relying on an expected version.
+**Page state:** After `npm run prepare:demo`, `INC-1001` is restored to its seeded `INVESTIGATING` state at version 3. Read the current incident before relying on an expected version.
 
 **Expected WebMCP capabilities:**
 
@@ -152,10 +152,8 @@ Execution tools remain absent.
 
 ## Before recording
 
-- [ ] Build the real `/demo` composition page; the current route is only a placeholder.
-- [ ] Mount `BubbleSurfaceWeb` for the selected subject and dispose it on cleanup.
-- [ ] Connect `BubbleSurfacePanel`, `HttpHumanSurfaceClient`, and `RefreshingApprovalClient`.
-- [ ] Run `npm run reset:demo` and note the returned state/version.
+- [ ] Run `npm run prepare:demo` and confirm `INVESTIGATING` version 3.
+- [ ] Run `npm run preflight:demo` and require `READY: true`.
 - [ ] Configure and validate `OPENAI_API_KEY` if the recorded flow uses `/reason` to create proposals.
 - [ ] Set `SECURITY_EVENT_SOURCE=elastic` plus `ELASTIC_ENDPOINT`/`ELASTIC_API_KEY` and run `npm run seed:elastic` if Elastic must be shown.
 - [ ] Set `IDENTITY_PROVIDER=auth0` and all required Auth0 variables if the supported external privilege action must be shown.

@@ -22,6 +22,7 @@ export function resetDemoState(db: Database.Database, subjectId = DEMO_SUBJECT_I
   // This imports and invokes the canonical seed first, restoring any missing fixture rows.
   seedSecurityData(db);
   const identityId = incident.affectedIdentityId;
+  const seededIdentity = securityFixture.identities.find((item) => item.id === identityId);
 
   db.transaction(() => {
     const actionIds = new Set<string>();
@@ -43,6 +44,9 @@ export function resetDemoState(db: Database.Database, subjectId = DEMO_SUBJECT_I
       .run(seededCase.title,seededCase.state,seededCase.version,seededCase.createdAt,seededCase.updatedAt,subjectId);
 
     if (identityId) {
+      if (!seededIdentity) throw new Error(`No deterministic identity fixture exists for ${identityId}.`);
+      db.prepare("UPDATE identities SET display_name=?,email=?,department=?,normal_location=?,risk_level=?,source=?,created_at=?,updated_at=? WHERE id=?")
+        .run(seededIdentity.displayName,seededIdentity.email,seededIdentity.department,seededIdentity.normalLocation,seededIdentity.riskLevel,seededIdentity.source,seededIdentity.createdAt,seededIdentity.updatedAt,seededIdentity.id);
       const updateSession=db.prepare("UPDATE sessions SET identity_id=?,device_id=?,token_type=?,status=?,ip_address=?,location=?,created_at=?,last_seen_at=?,source=? WHERE id=?");
       for(const item of securityFixture.sessions.filter(value=>value.identityId===identityId)) updateSession.run(item.identityId,item.deviceId,item.tokenType,item.status,item.ipAddress,item.location,item.createdAt,item.lastSeenAt,item.source,item.id);
       const updatePrivilege=db.prepare("UPDATE privileges SET identity_id=?,asset_id=?,name=?,scope=?,status=?,granted_at=?,revoked_at=?,source=? WHERE id=?");
@@ -52,6 +56,8 @@ export function resetDemoState(db: Database.Database, subjectId = DEMO_SUBJECT_I
 
   const lifecycle=db.prepare("SELECT state,version FROM security_cases WHERE id=?").get(subjectId) as {state:string;version:number};
   const proposals=Number((db.prepare("SELECT COUNT(*) AS count FROM action_proposal_versions WHERE subject_type='INCIDENT' AND subject_id=?").get(subjectId) as {count:number}).count);
+  const approvals=Number((db.prepare("SELECT COUNT(*) AS count FROM approval_decisions WHERE action_id IN (SELECT id FROM action_proposals WHERE subject_type='INCIDENT' AND subject_id=?)").get(subjectId) as {count:number}).count);
+  const executions=Number((db.prepare("SELECT COUNT(*) AS count FROM execution_records WHERE action_id IN (SELECT id FROM action_proposals WHERE subject_type='INCIDENT' AND subject_id=?)").get(subjectId) as {count:number}).count);
   const verifications=Number((db.prepare("SELECT COUNT(*) AS count FROM verification_results WHERE subject_type='INCIDENT' AND subject_id=?").get(subjectId) as {count:number}).count);
-  return {subjectId,lifecycleState:lifecycle.state,lifecycleVersion:lifecycle.version,proposals,approvals:0,executions:0,verifications};
+  return {subjectId,lifecycleState:lifecycle.state,lifecycleVersion:lifecycle.version,proposals,approvals,executions,verifications};
 }

@@ -8,6 +8,10 @@ import { SqliteIdentityAdapter } from "../integrations/sqlite-identity.adapter";
 import { SqliteSecurityEventAdapter } from "../integrations/sqlite-security-event.adapter";
 import { SqliteControlPlaneRepository } from "../repositories/sqlite-control-plane.repository";
 import { SqliteSecurityContextRepository } from "../repositories/sqlite-security-context.repository";
+import { SqliteCaseRepository } from "../repositories/sqlite-case.repository";
+import { LifecycleService } from "../domain/lifecycle/lifecycle.service";
+import { ProposalReviewService } from "../review/proposal-review.service";
+import { SqliteProposalReviewRepository } from "../review/sqlite-proposal-review.repository";
 import { seedSecurityData } from "../seed/seed-security-data";
 import type { BrowserWebMcpAdapter } from "./browser-webmcp.adapter";
 import { CapabilityContextService, CapabilitySubjectNotFoundError } from "./capability-context.service";
@@ -17,6 +21,7 @@ import { createWebMcpToolDefinitions } from "./tool-definitions";
 import { StaleCapabilityContextError, StaleProposalApprovalError, ToolInvocationService } from "./tool-invocation.service";
 import { ControlPlaneWebMcpAuditRecorder } from "./webmcp-audit";
 import type { BrowserToolRegistration } from "./webmcp-tool.types";
+import { ContainmentPreparationService, InvestigationCompletionService } from "./containment-preparation.service";
 
 class MemoryBrowserAdapter implements BrowserWebMcpAdapter {
   readonly tools = new Map<string, BrowserToolRegistration>();
@@ -32,6 +37,7 @@ describe("WebMCP capability infrastructure", () => {
   let invocations: ToolInvocationService;
   let refresh: CapabilityRefreshService;
   let browser: MemoryBrowserAdapter;
+  let reviews: ProposalReviewService;
   beforeEach(() => {
     db = new Database(":memory:"); initializeSecuritySchema(db); seedSecurityData(db);
     const securityRepository = new SqliteSecurityContextRepository(db);
@@ -39,9 +45,16 @@ describe("WebMCP capability infrastructure", () => {
     controlPlane = new ControlPlaneService(new SqliteControlPlaneRepository(db), new EvidenceReferenceValidator(securityRepository));
     const audit = new ControlPlaneWebMcpAuditRecorder(controlPlane);
     contexts = new CapabilityContextService(new SqliteCapabilityContextRepository(db));
+    const lifecycle=new LifecycleService(new SqliteCaseRepository(db));
+    const completion=new InvestigationCompletionService(securityContext,lifecycle,controlPlane);
+    const preparation=new ContainmentPreparationService(securityContext,lifecycle,controlPlane);
     const tools = createWebMcpToolDefinitions({ securityContext, identityProvider: new SqliteIdentityAdapter(securityRepository),
-      eventSource: new SqliteSecurityEventAdapter(db), evidenceValidator: new EvidenceReferenceValidator(securityRepository) });
+      eventSource: new SqliteSecurityEventAdapter(db), evidenceValidator: new EvidenceReferenceValidator(securityRepository),
+      completeInvestigation:(id,version,actor)=>completion.complete(id,version,actor),
+      prepareContainment:(input,actor)=>preparation.prepare(input,actor) });
     invocations = new ToolInvocationService(contexts, tools, audit);
+    reviews=new ProposalReviewService(new SqliteProposalReviewRepository(db),controlPlane,securityContext,
+      new EvidenceReferenceValidator(securityRepository),lifecycle);
     browser = new MemoryBrowserAdapter();
     refresh = new CapabilityRefreshService(contexts, tools, invocations, browser, audit);
   });
@@ -67,6 +80,25 @@ describe("WebMCP capability infrastructure", () => {
     const after=contexts.load("INCIDENT","INC-1001");expect(after.lifecycleVersion).toBe(before.lifecycleVersion);
     expect(after.lifecycleState).toBe(before.lifecycleState);expect(after.proposalAuthorities).toEqual(before.proposalAuthorities);
     expect((await refresh.refreshCapabilities("INCIDENT","INC-1001")).registered).not.toEqual(expect.arrayContaining(["revoke_approved_sessions","remove_approved_privilege"]));
+  });
+
+  it("uses the legal investigation boundary, persists review-required privilege removal, and unlocks only after exact approval",async()=>{
+    expect((await refresh.refreshCapabilities("INCIDENT","INC-1001")).registered).not.toContain("prepare_containment");
+    await invocations.invoke("review_evidence_timeline",{subjectId:"INC-1001",expectedLifecycleVersion:3},"browser-agent");
+    expect(contexts.load("INCIDENT","INC-1001")).toMatchObject({lifecycleState:"VALIDATED",lifecycleVersion:4});
+    expect((await refresh.refreshCapabilities("INCIDENT","INC-1001")).registered).toContain("prepare_containment");
+    const result=await invocations.invoke("prepare_containment",{subjectId:"INC-1001",expectedLifecycleVersion:4,
+      requestedActions:["REMOVE_PRIVILEGE"],evidenceRefs:["EVD-1003"]},"browser-agent") as {status:string;lifecycleVersion:number;proposals:Array<{actionId:string}>};
+    expect(result).toMatchObject({status:"REVIEW_REQUIRED",lifecycleVersion:6,proposals:[{proposalVersion:1,actionType:"REMOVE_PRIVILEGE",reviewRequired:true,target:{identityId:"IDN-ASHA",privilegeIds:["PRV-ASHA-FINADMIN"]}}]});
+    const actionId=result.proposals[0].actionId, pending=reviews.read(actionId);
+    expect(pending.latest).toMatchObject({subjectId:"INC-1001",proposalVersion:1,approvalState:"NONE",reviewState:"PENDING_REVIEW",parameters:{lifecycleVersion:6}});
+    expect(db.prepare("SELECT COUNT(*) count FROM execution_records").get()).toEqual({count:0});
+    expect((await refresh.refreshCapabilities("INCIDENT","INC-1001")).registered).not.toContain("remove_approved_privilege");
+    reviews.approve({actionId,proposalVersion:1,expectedLifecycleVersion:6,actorId:"analyst-kavya"});
+    const approved=await refresh.refreshCapabilities("INCIDENT","INC-1001");
+    expect(approved.registered).toContain("remove_approved_privilege");
+    expect(approved.registered).not.toContain("revoke_approved_sessions");
+    expect(db.prepare("SELECT COUNT(*) count FROM execution_records").get()).toEqual({count:0});
   });
 
   it("refreshes only registry deltas across lifecycle and approval changes", async () => {

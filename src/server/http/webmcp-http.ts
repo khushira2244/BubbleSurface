@@ -14,6 +14,7 @@ import { ExecutionError } from "../execution/execution.errors";
 import { VerificationError } from "../verification/verification.errors";
 import { demoBrowserPrincipalResolver } from "../webmcp/demo-principal-resolver";
 import type { PrincipalResolver } from "../webmcp/integration-contracts";
+import { Auth0ProviderError } from "../integrations/auth0/auth0.errors";
 
 export function readBrowserCapabilities(subjectId: string): NextResponse {
   try {
@@ -47,6 +48,9 @@ export async function invokeBrowserTool(toolName: string, request: Request,
 }
 
 function webMcpError(error: unknown): NextResponse {
+  if (error instanceof Auth0ProviderError) return NextResponse.json({ error: {
+    code:error.code,message:error.message,provider:"auth0",
+  } }, { status: 502 });
   if (error instanceof ExecutionError) return NextResponse.json({ error: { code:error.code,message:error.message } }, { status:error.httpStatus });
   if (error instanceof VerificationError) return NextResponse.json({ error: { code:error.code,message:error.message } }, { status:error.httpStatus });
   if (error instanceof CapabilitySubjectNotFoundError) {

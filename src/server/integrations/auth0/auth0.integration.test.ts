@@ -51,6 +51,9 @@ describe("Auth0 identity integration",()=>{
     await client.removeUserRole("auth0|asha","role-fin");const [url,init]=ok.mock.calls[0];expect(url).toBe("https://tenant.example/api/v2/users/auth0%7Casha/roles");expect(init?.method).toBe("DELETE");expect(JSON.parse(String(init?.body))).toEqual({roles:["role-fin"]});
     for(const [status,code] of [[401,"AUTH0_UNAUTHORIZED"],[403,"AUTH0_FORBIDDEN"],[404,"AUTH0_NOT_FOUND"],[429,"AUTH0_RATE_LIMITED"],[500,"AUTH0_UPSTREAM_FAILURE"]] as const){const failing=new Auth0ManagementClient("tenant.example",tokens,vi.fn(async()=>new Response(JSON.stringify({message:"safe failure"}),{status,headers:{"x-request-id":"req-1"}})) as typeof fetch);await expect(failing.getUser("auth0|asha")).rejects.toMatchObject({code,status,requestId:"req-1"});}
   });
+  it("assigns the exact role using the encoded dedicated-user endpoint",async()=>{const tokens={getToken:vi.fn(async()=>"token")}as unknown as Auth0ManagementTokenClient;
+    const fetcher=vi.fn(async(_url:string|URL|Request,_init?:RequestInit)=>new Response(null,{status:204})),client=new Auth0ManagementClient("tenant.example",tokens,fetcher as typeof fetch);await client.assignUserRole("auth0|asha","role-fin");
+    const[url,init]=fetcher.mock.calls[0];expect(url).toBe("https://tenant.example/api/v2/users/auth0%7Casha/roles");expect(init?.method).toBe("POST");expect(JSON.parse(String(init?.body))).toEqual({roles:["role-fin"]})});
   it("verification performs fresh role reads and passes only after the role is absent",async()=>{
     db=new Database(":memory:");initializeSecuritySchema(db);seedSecurityData(db);
     const roles=vi.fn().mockResolvedValueOnce([{id:"role-fin",name:"Finance Administrator"}]).mockResolvedValueOnce([]);

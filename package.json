@@ -9,7 +9,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "seed:elastic": "node scripts/sync-inc-1001-to-elastic.mjs",
-    "reset:demo": "node --require ./scripts/tsx-platform-preload.cjs --import tsx scripts/reset-demo.ts"
+    "reset:demo": "node --require ./scripts/tsx-platform-preload.cjs --import tsx scripts/reset-demo.ts",
+    "prepare:demo": "node --require ./scripts/tsx-platform-preload.cjs --import tsx scripts/reset-demo.ts",
+    "prepare:demo:auth0": "node --require ./scripts/tsx-platform-preload.cjs --import tsx scripts/prepare-demo-auth0.ts",
+    "preflight:demo": "node --require ./scripts/tsx-platform-preload.cjs --import tsx scripts/preflight-demo.ts"
   },
   "dependencies": {
     "better-sqlite3": "^12.2.0",

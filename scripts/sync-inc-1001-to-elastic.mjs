@@ -1,5 +1,8 @@
 import Database from "better-sqlite3";
 import { resolve } from "node:path";
+import nextEnv from "@next/env";
+
+nextEnv.loadEnvConfig(process.cwd());
 
 const endpoint = process.env.ELASTIC_ENDPOINT?.replace(/\/$/, "");
 const apiKey = process.env.ELASTIC_API_KEY;

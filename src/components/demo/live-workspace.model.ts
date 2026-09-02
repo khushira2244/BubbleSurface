@@ -16,7 +16,7 @@ export function buildLiveWorkspaceModel(context: IncidentContext,
   capabilities: LiveWorkspaceModel["capabilities"]): LiveWorkspaceModel {
   if (!context.identity) throw new Error(`Incident ${context.incident.id} has no affected identity.`);
   const humanSurface: HumanSurfaceModel = {
-    subject: { id: context.incident.id, type: "INCIDENT", label: context.incident.id, title: "Human intervention" },
+    subject: { id: context.incident.id, type: "INCIDENT", label: context.identity.displayName, title: "Human intervention" },
     status: "IDLE",
     execution: { state: "NONE" },
     verification: { state: "NONE", checks: [] },
