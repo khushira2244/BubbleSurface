@@ -10,6 +10,9 @@ export class ControlPlaneService {
     this.evidence.validate(proposal.subjectType, proposal.subjectId, proposal.evidenceRefs);
     this.repository.saveActionProposal(proposal);
   }
+  validateActionProposalEvidence(input: ActionProposal): void {
+    this.evidence.validate(input.subjectType,input.subjectId,input.evidenceRefs);
+  }
   saveApprovalDecision(input: ApprovalDecision): void { this.repository.saveApprovalDecision(approvalDecisionSchema.parse(input)); }
   saveExecutionRecord(input: ExecutionRecord): ExecutionRecord {
     return this.repository.saveExecutionRecord(executionRecordSchema.parse(input));

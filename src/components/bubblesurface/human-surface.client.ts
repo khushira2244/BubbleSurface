@@ -42,9 +42,11 @@ export class HttpHumanSurfaceClient implements ApprovalClient {
     return actionId?this.loadModel(subject,actionId):null;
   }
   private async get(path: string) { return responseJson(await fetch(`${this.baseUrl}${path}`, { cache: "no-store" })); }
-  private async mutate(actionId: string, kind: string, input: object) {
+  private async mutate(actionId: string, kind: string,
+    input: ApprovalMutation & { parameters?: Record<string, unknown>; rationale?: string }) {
+    const { actionId: _routeActionId, ...body } = input;
     return responseJson(await fetch(`${this.baseUrl}/api/actions/${encodeURIComponent(actionId)}/${kind}`, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input),
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
     }));
   }
 }

@@ -42,7 +42,10 @@ export class ActionVerificationService {
           expected={revokedPrivilegeIds:targets};state={activeTargetPrivilegeIds:active,revokedTargetPrivilegeIds:revoked};success=active.length===0&&revoked.length===targets.length;
         }
       }else{
-        const activeTrusted=observed.sessions.filter(x=>x.status==="ACTIVE"&&x.deviceId&&observed.trustedDeviceIds.includes(x.deviceId)).map(x=>x.id),activeTargets=observed.sessions.filter(x=>targets.includes(x.id)&&x.status==="ACTIVE").map(x=>x.id);
+        const activeTrusted=observed.sessions.filter(x=>x.status==="ACTIVE"&&x.deviceId&&observed.trustedDeviceIds.includes(x.deviceId)).map(x=>x.id);
+        const activeTargets=proposal.actionType==="REMOVE_PRIVILEGE"
+          ?observed.privileges.filter(x=>targets.includes(x.id)&&x.status==="ACTIVE").map(x=>x.id)
+          :observed.sessions.filter(x=>targets.includes(x.id)&&x.status==="ACTIVE").map(x=>x.id);
         expected={identityExists:true,activeTargetIds:[],trustedSessionPreserved:true};state={identityExists:observed.identityExists,activeTargetIds:activeTargets,activeTrustedSessionIds:activeTrusted,sessions:observed.sessions,privileges:observed.privileges};success=observed.identityExists&&activeTargets.length===0&&activeTrusted.length>0;
       }
       const at=new Date().toISOString(),result={id:verificationId,subjectType:"INCIDENT"as const,subjectId:input.subjectId,actionId:input.actionId,proposalVersion:input.proposalVersion,executionId:execution.id,verificationType:input.kind,expectedState:expected,observedState:state,success,checkedAt:at,details:{status:success?"PASSED":"FAILED",lifecycleVersionAtStart:input.expectedLifecycleVersion},actorId:input.actorId,source:this.source.provider??"demo-identity",startedAt:at,failureClassification:success?null:"OBSERVED_STATE_MISMATCH",idempotencyKey:input.idempotencyKey};

@@ -49,7 +49,7 @@ export function mapControlPlaneToHumanSurface(input: { subject: HumanSurfaceSubj
   const verificationRows = input.verifications ?? [];
   const checks = verificationRows.map((value) => ({ name: text(value.verificationType, "Verification"),
     passed: value.success === true || value.status === "PASSED", checkedAt: optionalText(value.checkedAt) }));
-  const anyFailed = checks.some((check) => !check.passed), allPassed = checks.length > 0 && checks.every((check) => check.passed);
+  const anyFailed = checks.some((check) => !check.passed), allPassed = new Set(checks.map(check=>check.name)).size >= 2 && checks.every((check) => check.passed);
   const verification: HumanSurfaceVerification = { state: anyFailed ? "FAILED" : allPassed ? "PASSED"
     : execution.state === "SUCCEEDED" ? "PENDING" : "NONE", checks };
   const activity = input.activity ?? buildActivity(proposal, execution, verification, latest);

@@ -40,8 +40,8 @@ describe("Auth0 identity integration",()=>{
   });
   it("removes only the exact mapped role and preserves unrelated roles",async()=>{
     db=new Database(":memory:");initializeSecuritySchema(db);seedSecurityData(db);
-    const client={getUserRoles:vi.fn(async()=>[{id:"other",name:"Other"},{id:"role-fin",name:"Finance Administrator"}]),removeUserRole:vi.fn(async()=>undefined)} as unknown as Auth0ManagementClient;
-    const executor=new Auth0IdentityActionExecutor(client,"auth0|asha",new DemoIdentityActionExecutor(db));
+    const client={getUser:vi.fn(async()=>({user_id:"auth0|asha",email:"asha.bubblesurface@example.com"})),getUserRoles:vi.fn(async()=>[{id:"other",name:"Other"},{id:"role-fin",name:"Finance Administrator"}]),removeUserRole:vi.fn(async()=>undefined)} as unknown as Auth0ManagementClient;
+    const executor=new Auth0IdentityActionExecutor(client,"auth0|asha","asha.bubblesurface@example.com",new DemoIdentityActionExecutor(db));
     await executor.removePrivileges([FINANCE_PRIVILEGE_ID]);expect(client.removeUserRole).toHaveBeenCalledWith("auth0|asha","role-fin");expect(client.removeUserRole).toHaveBeenCalledTimes(1);
     await expect(executor.removePrivileges(["UNRELATED"])).rejects.toMatchObject({code:"AUTH0_MAPPING_REJECTED"});expect(client.removeUserRole).toHaveBeenCalledTimes(1);
   });
@@ -57,10 +57,19 @@ describe("Auth0 identity integration",()=>{
   it("verification performs fresh role reads and passes only after the role is absent",async()=>{
     db=new Database(":memory:");initializeSecuritySchema(db);seedSecurityData(db);
     const roles=vi.fn().mockResolvedValueOnce([{id:"role-fin",name:"Finance Administrator"}]).mockResolvedValueOnce([]);
-    const client={getUser:vi.fn(async()=>({user_id:"auth0|asha"})),getUserRoles:roles} as unknown as Auth0ManagementClient;
-    const source=new Auth0VerificationSource(client,"auth0|asha",new DemoIdentityVerificationSource(db));
+    const client={getUser:vi.fn(async()=>({user_id:"auth0|asha",email:"asha.bubblesurface@example.com"})),getUserRoles:roles} as unknown as Auth0ManagementClient;
+    const source=new Auth0VerificationSource(client,"auth0|asha","asha.bubblesurface@example.com",new DemoIdentityVerificationSource(db));
     expect((await source.observeIdentity("IDN-ASHA")).privileges).toContainEqual(expect.objectContaining({id:FINANCE_PRIVILEGE_ID,status:"ACTIVE"}));
     expect((await source.observeIdentity("IDN-ASHA")).privileges).toContainEqual(expect.objectContaining({id:FINANCE_PRIVILEGE_ID,status:"REVOKED"}));expect(roles).toHaveBeenCalledTimes(2);
+  });
+  it("fails closed on dedicated-user id or email mismatch before mutation or verification",async()=>{
+    db=new Database(":memory:");initializeSecuritySchema(db);seedSecurityData(db);
+    const client={getUser:vi.fn(async()=>({user_id:"auth0|other",email:"other@example.com"})),getUserRoles:vi.fn(async()=>[]),removeUserRole:vi.fn(async()=>undefined)} as unknown as Auth0ManagementClient;
+    const executor=new Auth0IdentityActionExecutor(client,"auth0|asha","asha.bubblesurface@example.com",new DemoIdentityActionExecutor(db));
+    await expect(executor.removePrivileges([FINANCE_PRIVILEGE_ID])).rejects.toMatchObject({code:"AUTH0_IDENTITY_MISMATCH"});
+    expect(client.getUserRoles).not.toHaveBeenCalled();expect(client.removeUserRole).not.toHaveBeenCalled();
+    const source=new Auth0VerificationSource(client,"auth0|asha","asha.bubblesurface@example.com",new DemoIdentityVerificationSource(db));
+    await expect(source.observeIdentity("IDN-ASHA")).rejects.toMatchObject({code:"AUTH0_IDENTITY_MISMATCH"});
   });
   it("classifies network failures without exposing credentials",async()=>{
     const client=new Auth0ManagementTokenClient({domain:"tenant.example",clientId:"client",clientSecret:"do-not-expose",audience:"audience"},vi.fn(async()=>{throw new Error("network")}) as typeof fetch);

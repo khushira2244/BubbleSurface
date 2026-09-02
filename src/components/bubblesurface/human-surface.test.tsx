@@ -60,12 +60,18 @@ describe("BubbleSurface human surface",()=>{
 
   it("renders passed and failed verification without relying on color alone",()=>{
     const passed=model(rawAction({approvalState:"APPROVED",reviewState:"APPROVED"}),[{status:"SUCCEEDED"}],
-      [{verificationType:"EXPECTED_STATE",success:true,status:"PASSED",checkedAt:"2026-01-02T04:00:00.000Z"}]);
+      [{verificationType:"VERIFY_IDENTITY_STATE",success:true,status:"PASSED",checkedAt:"2026-01-02T04:00:00.000Z"},
+        {verificationType:"VERIFY_CONTAINMENT",success:true,status:"PASSED",checkedAt:"2026-01-02T04:01:00.000Z"}]);
     const failed=model(rawAction({approvalState:"APPROVED",reviewState:"APPROVED"}),[{status:"SUCCEEDED"}],
       [{verificationType:"EXPECTED_STATE",success:false,status:"FAILED",checkedAt:"2026-01-02T04:00:00.000Z"}]);
-    expect(renderToStaticMarkup(<VerificationStatus model={passed}/>)).toContain("Passed: Expected state");
+    expect(renderToStaticMarkup(<VerificationStatus model={passed}/>)).toContain("Passed: Verify identity state");
     expect(renderToStaticMarkup(<VerificationStatus model={failed}/>)).toContain("Failed: Expected state");
     expect(passed.status).toBe("VERIFIED");expect(failed.status).toBe("VERIFICATION_FAILED");
+  });
+  it("does not show final verified status until both required verification kinds pass",()=>{
+    const partial=model(rawAction({approvalState:"APPROVED",reviewState:"APPROVED"}),[{status:"SUCCEEDED"}],
+      [{verificationType:"VERIFY_IDENTITY_STATE",success:true,status:"PASSED",checkedAt:"2026-01-02T04:00:00.000Z"}]);
+    expect(partial.status).not.toBe("VERIFIED");expect(partial.verification.state).toBe("PENDING");
   });
 
   it("distinguishes agent, human, and system activity in the operational timeline",()=>{

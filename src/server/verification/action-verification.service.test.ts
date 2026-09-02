@@ -16,6 +16,9 @@ import { seedSecurityData } from "../seed/seed-security-data";
 import { ActionVerificationService } from "./action-verification.service";
 import { DemoIdentityVerificationSource } from "./demo-identity-verification.source";
 import { StaleVerificationLifecycleError, VerificationAuthorityError, VerificationPermissionError } from "./verification.errors";
+import { CapabilityContextService } from "../webmcp/capability-context.service";
+import { SqliteCapabilityContextRepository } from "../webmcp/sqlite-capability-context.repository";
+import { evaluateCapabilities } from "../webmcp/capability-policy";
 
 describe("post-containment verification", () => {
   let db:Database.Database, verify:ActionVerificationService, control:ControlPlaneService;
@@ -51,5 +54,20 @@ describe("post-containment verification", () => {
   it("requires a successful execution",async()=>{
     db.prepare("DELETE FROM execution_records").run();
     await expect(verify.verify({...base,expectedLifecycleVersion:8,idempotencyKey:"none",kind:"VERIFY_CONTAINMENT"})).rejects.toBeInstanceOf(VerificationAuthorityError);
+  });
+  it("checks privilege absence for REMOVE_PRIVILEGE and recovers only after both kinds pass",async()=>{
+    const parameters=JSON.stringify({privilegeIds:["PRV-ASHA-FINADMIN"],lifecycleVersion:6});
+    db.prepare("UPDATE action_proposal_versions SET action_type='REMOVE_PRIVILEGE',parameters_json=? WHERE action_id=?").run(parameters,base.actionId);
+    db.prepare("UPDATE action_proposals SET action_type='REMOVE_PRIVILEGE',parameters_json=? WHERE id=?").run(parameters,base.actionId);
+    const failed=await verify.verify({...base,expectedLifecycleVersion:8,idempotencyKey:"privilege-active",kind:"VERIFY_IDENTITY_STATE"});
+    expect(failed.verification).toMatchObject({success:false,observedState:{activeTargetIds:["PRV-ASHA-FINADMIN"]}});
+    expect(failed.lifecycle.state).toBe("VERIFYING");
+    db.prepare("UPDATE privileges SET status='REVOKED',revoked_at='2026-08-28T01:00:00.000Z' WHERE id='PRV-ASHA-FINADMIN'").run();
+    const identity=await verify.verify({...base,expectedLifecycleVersion:9,idempotencyKey:"privilege-absent",kind:"VERIFY_IDENTITY_STATE"});
+    expect(identity.verification).toMatchObject({success:true,observedState:{activeTargetIds:[]}});expect(identity.lifecycle.state).toBe("VERIFYING");
+    const containment=await verify.verify({...base,expectedLifecycleVersion:9,idempotencyKey:"privilege-contained",kind:"VERIFY_CONTAINMENT"});
+    expect(containment.verification.success).toBe(true);expect(containment.lifecycle).toMatchObject({state:"RECOVERED",version:10});
+    const allowed=evaluateCapabilities(new CapabilityContextService(new SqliteCapabilityContextRepository(db)).load("INCIDENT","INC-1001")).allowed.map(x=>x.toolName);
+    expect(allowed).not.toEqual(expect.arrayContaining(["remove_approved_privilege","revoke_approved_sessions","verify_identity_state","verify_containment"]));
   });
 });

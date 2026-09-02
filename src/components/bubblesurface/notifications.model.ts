@@ -1,0 +1,6 @@
+import type { BubbleSurfaceNotification, BubbleSurfaceNotificationEvent, BubbleSurfaceNotificationMessageResolver } from "./notifications.types";
+
+const messages:Record<string,string>={INVESTIGATION_VALIDATED:"Investigation completed.",HUMAN_REVIEW_REQUIRED:"Containment proposal ready for review.",ACTION_APPROVED:"Approval recorded. Sensitive action is now available.",EXECUTION_SUCCEEDED:"Sensitive action completed.",INCIDENT_RECOVERED:"Containment verified. Incident recovered."};
+export function notificationMessage(eventType:string):string|null{return messages[eventType]??null;}
+/** Stateful UI helper: authoritative event IDs are consumed once, including events that do not produce notifications. */
+export class BubbleSurfaceNotificationTracker {private readonly seen=new Set<string>();ingest(events:readonly BubbleSurfaceNotificationEvent[],resolve?:BubbleSurfaceNotificationMessageResolver):BubbleSurfaceNotification[]{const notifications:BubbleSurfaceNotification[]=[];for(const event of events){if(this.seen.has(event.id))continue;this.seen.add(event.id);const fallback=notificationMessage(event.eventType);if(!fallback)continue;notifications.push({id:`bubblesurface-notification-${event.id}`,sourceEventId:event.id,type:event.eventType,message:resolve?.(event,fallback)??fallback});}return notifications;}}

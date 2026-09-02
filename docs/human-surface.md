@@ -31,8 +31,24 @@ The public component module is `src/components/bubblesurface/index.ts`:
 - `ActivityTimeline`: chronological `AGENT`, `HUMAN`, and `SYSTEM` entries.
 - `HttpHumanSurfaceClient`: thin adapter over existing proposal, execution, verification, and review routes.
 - `HumanReviewController`: performs a review mutation and then reloads the authoritative UI model.
+- `BubbleSurfaceNotifications`: optional, bounded awareness layer driven by authoritative activity events.
+- `BubbleSurfaceToast`: small accessible presentation component used by the notification layer.
 
 Styles use a local CSS module so embedding does not require global application styling. Controls use native buttons, inputs, labels, and textareas for keyboard accessibility.
+
+### Optional notifications
+
+`BubbleSurfacePanel` remains the optional human authority and review surface. `BubbleSurfaceNotifications` is a separate, optional awareness surface; it never approves, authorizes, executes, verifies, or changes lifecycle state. A host with its own notification system can omit it or pass `{ enabled: false }` without changing BubbleSurface core behavior.
+
+```tsx
+<BubbleSurfaceNotifications
+  events={authoritativeActivity}
+  config={{ enabled: true, position: "top-right", autoDismissMs: 4000, maxQueue: 3 }}
+  onNotify={(notification) => hostTelemetry.observe(notification)}
+/>
+```
+
+Notifications are derived from existing authoritative audit-event IDs. Each ID is consumed once, so repeated polling does not repeat a toast. `resolveMessage` may provide host-specific wording while preserving the authoritative source event. The built-in layer recognizes investigation completion, review required, approval, successful execution, and final recovery only; failures and intermediate polling are not presented as success.
 
 ## D. View model and state mapping
 
