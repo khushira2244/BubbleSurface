@@ -1,5 +1,8 @@
 # BubbleSurface
 
+<img width="803" height="404" alt="image" src="https://github.com/user-attachments/assets/ab17f708-9f9a-42bc-9ca8-d36ece95c989" />
+
+
 A state-aware, human-governed WebMCP capability layer for cybersecurity applications.
 
 > **The AI doesn't get a permanent security toolbox. It gets only the capabilities valid right now.**
@@ -260,6 +263,7 @@ Dedicated abort signals remove tools. `BubbleSurfaceWeb` reconciles added, retai
 ![OpenAI](https://img.shields.io/badge/OpenAI-structured_reasoning-412991?logo=openai&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ed?logo=docker&logoColor=white)
 ![Google Cloud Run](https://img.shields.io/badge/Google_Cloud-Run-4285f4?logo=googlecloud&logoColor=white)
+![OpenAI Codex](https://img.shields.io/badge/OpenAI_Codex-built_with_Codex-412991?logo=openai&logoColor=white)
 
 The application uses Next.js 15 and React 19 with TypeScript and Zod, SQLite through `better-sqlite3`, replaceable Auth0 and Elastic adapters, optional OpenAI reasoning, WebMCP, Docker, and Google Cloud Run.
 
