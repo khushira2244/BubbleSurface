@@ -11,6 +11,22 @@ A state-aware, human-governed WebMCP capability layer for cybersecurity applicat
 Investigate -> Human Review -> Execute -> Verify -> Recover
 ```
 
+![WebMCP](https://img.shields.io/badge/WebMCP-capability_layer-2563eb)
+![Next.js 15](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19-20232a?logo=react&logoColor=61dafb)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white)
+![Zod](https://img.shields.io/badge/Zod-validation-3e67b1)
+![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003b57?logo=sqlite&logoColor=white)
+![better-sqlite3](https://img.shields.io/badge/better--sqlite3-native-64748b)
+![Auth0](https://img.shields.io/badge/Auth0-Management_API-eb5424?logo=auth0&logoColor=white)
+![Elastic](https://img.shields.io/badge/Elastic-SIEM-005571?logo=elastic&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-structured_reasoning-412991?logo=openai&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ed?logo=docker&logoColor=white)
+![Google Cloud Run](https://img.shields.io/badge/Google_Cloud-Run-4285f4?logo=googlecloud&logoColor=white)
+![OpenAI Codex](https://img.shields.io/badge/OpenAI_Codex-built_with_Codex-412991?logo=openai&logoColor=white)
+
+
 [Live application](https://bubblesurface-236264514374.asia-south1.run.app) | [Live demo video](https://youtu.be/oMrEiIA67cs)
 
 ## Judge Testing Guide
@@ -248,22 +264,8 @@ document.modelContext.registerTool(tool, { signal });
 
 Dedicated abort signals remove tools. `BubbleSurfaceWeb` reconciles added, retained, and removed registrations during initialization, polling, explicit refresh, successful approval, invocation completion, subject changes, and disposal. Server enforcement remains authoritative if an agent retains an older callback.
 
-## Technology Stack
+## Technology Stack for testing
 
-![WebMCP](https://img.shields.io/badge/WebMCP-capability_layer-2563eb)
-![Next.js 15](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs&logoColor=white)
-![React 19](https://img.shields.io/badge/React-19-20232a?logo=react&logoColor=61dafb)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178c6?logo=typescript&logoColor=white)
-![Zod](https://img.shields.io/badge/Zod-validation-3e67b1)
-![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-003b57?logo=sqlite&logoColor=white)
-![better-sqlite3](https://img.shields.io/badge/better--sqlite3-native-64748b)
-![Auth0](https://img.shields.io/badge/Auth0-Management_API-eb5424?logo=auth0&logoColor=white)
-![Elastic](https://img.shields.io/badge/Elastic-SIEM-005571?logo=elastic&logoColor=white)
-![OpenAI](https://img.shields.io/badge/OpenAI-structured_reasoning-412991?logo=openai&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ed?logo=docker&logoColor=white)
-![Google Cloud Run](https://img.shields.io/badge/Google_Cloud-Run-4285f4?logo=googlecloud&logoColor=white)
-![OpenAI Codex](https://img.shields.io/badge/OpenAI_Codex-built_with_Codex-412991?logo=openai&logoColor=white)
 
 The application uses Next.js 15 and React 19 with TypeScript and Zod, SQLite through `better-sqlite3`, replaceable Auth0 and Elastic adapters, optional OpenAI reasoning, WebMCP, Docker, and Google Cloud Run.
 
