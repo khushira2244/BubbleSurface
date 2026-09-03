@@ -8,8 +8,7 @@ A state-aware, human-governed WebMCP capability layer for cybersecurity applicat
 Investigate -> Human Review -> Execute -> Verify -> Recover
 ```
 
-[Live application](https://bubblesurface-236264514374.asia-south1.run.app) · [Live incident demo](https://bubblesurface-236264514374.asia-south1.run.app/demo/live) · **Demo video: Coming shortly**
-
+[Live application](https://bubblesurface-236264514374.asia-south1.run.app) | [Live demo video](https://youtu.be/oMrEiIA67cs)
 ## Why BubbleSurface
 
 Security agents may need to inspect incidents, review sessions and privilege changes, revoke access, remove privileges, and verify containment. Giving an agent permanent access to all of those operations creates a dangerous static authority boundary: a tool appropriate now may be inappropriate seconds later.
